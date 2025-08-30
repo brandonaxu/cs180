@@ -1,0 +1,175 @@
+:root {
+  --bg: #ffffff;
+  --fg: #111111;
+  --muted: #666666;
+  --card: #f6f6f6;
+  --link: #0b57d0;
+  --ring: #94b8ff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0b0b;
+    --fg: #eaeaea;
+    --muted: #a7a7a7;
+    --card: #151515;
+    --link: #82aaff;
+    --ring: #204a87;
+  }
+}
+
+/* Explicit override via data-theme */
+:root[data-theme="light"] {
+  --bg: #ffffff;
+  --fg: #111111;
+  --muted: #666666;
+  --card: #f6f6f6;
+  --link: #0b57d0;
+  --ring: #94b8ff;
+}
+:root[data-theme="dark"] {
+  --bg: #0b0b0b;
+  --fg: #eaeaea;
+  --muted: #a7a7a7;
+  --card: #151515;
+  --link: #82aaff;
+  --ring: #204a87;
+}
+
+
+/* --- Base --- */
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.wrap { max-width: 860px; margin: 0 auto; padding: 48px 20px 32px; }
+
+/* --- Header & Nav --- */
+header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+.brand { font-size: clamp(20px, 2.4vw, 28px); font-weight: 700; letter-spacing: 0.2px; }
+.subtitle { color: var(--muted); font-size: 0.98rem; }
+nav { display: flex; gap: 12px; flex-wrap: wrap; }
+nav a { text-decoration: none; padding: 8px 12px; border: 1px solid color-mix(in oklab, var(--fg) 14%, transparent); border-radius: 999px; color: var(--fg); transition: transform .08s ease, background .2s ease; }
+nav a:hover { background: color-mix(in oklab, var(--fg) 6%, transparent); }
+nav a:focus { outline: 3px solid var(--ring); outline-offset: 2px; }
+
+/* --- Hero (front page) --- */
+.hero { margin: 12px 0 24px; padding: 20px; border-radius: 16px; background: linear-gradient(180deg, color-mix(in oklab, var(--card) 100%, transparent), transparent 140%); border: 1px solid color-mix(in oklab, var(--fg) 8%, transparent); }
+.hero h1 { font-size: clamp(28px, 4vw, 42px); line-height: 1.15; margin: 0 0 6px; letter-spacing: -0.015em; }
+.hero p { margin: 0; color: var(--muted); }
+
+/* --- Grid & Cards (front page) --- */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 20px; }
+.card { position: relative; display: block; background: var(--card); border: 1px solid color-mix(in oklab, var(--fg) 10%, transparent); border-radius: 16px; padding: 16px 16px 18px; text-decoration: none; color: inherit; transition: transform .08s ease, background .2s ease, border-color .2s ease; }
+.card:hover { transform: translateY(-2px); }
+.card h3 { margin: 2px 0 6px; font-size: 1.05rem; }
+.card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.card .eyebrow { color: var(--muted); font-size: 0.8rem; letter-spacing: .02em; text-transform: uppercase; }
+
+/* --- Content (project pages) --- */
+h1 { font-size: clamp(26px, 4vw, 36px); margin-bottom: 6px; }
+h2 { font-size: 1.3rem; margin-top: 32px; }
+
+p { max-width: 70ch; }
+figure { margin: 20px 0; }
+img { max-width: 100%; border-radius: 12px; border: 1px solid color-mix(in oklab, var(--fg) 10%, transparent); }
+figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+
+/* --- Links & Footer --- */
+a.inline { color: var(--link); }
+a.inline:focus { outline: 3px solid var(--ring); outline-offset: 2px; }
+footer { margin-top: 42px; color: var(--muted); font-size: 0.95rem; }
+
+/* --- Motion polish --- */
+@media (min-width: 920px) and (prefers-reduced-motion: no-preference) {
+  .card:hover { box-shadow: 0 6px 20px color-mix(in oklab, var(--fg) 12%, transparent); }
+}
+
+
+/* --- Gallery (rows of images, max 4 per row) --- */
+.gallery { 
+  display: grid; 
+  gap: 12px; 
+  grid-template-columns: repeat(4, minmax(0, 1fr)); /* cap at 4 */
+  align-items: start;
+}
+/* Responsive fallbacks: 3/2/1 columns on smaller screens */
+@media (max-width: 1000px) { .gallery { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 700px)  { .gallery { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 460px)  { .gallery { grid-template-columns: 1fr; } }
+
+.gallery figure { margin: 0; }
+.gallery img { 
+  width: 100%; 
+  height: auto; 
+  /* Prevent overly large images while keeping aspect ratio */
+  max-block-size: 250px;          /* ~250px tall cap; adjust if needed */
+  object-fit: cover;               /* crop gently if too tall */
+  border-radius: 12px; 
+  border: 1px solid color-mix(in oklab, var(--fg) 10%, transparent);
+}
+.gallery figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+
+.gallery-text {
+  background: var(--card);
+  border: 1px solid color-mix(in oklab, var(--fg) 10%, transparent);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Match font and flow with figcaptions but slightly larger */
+.gallery-text p {
+  max-width: none;
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--fg);
+}
+/* Transition the actual properties that change with the tokens */
+html, body {
+  transition: background-color .35s ease, color .35s ease;
+}
+*,
+*::before,
+*::after {
+  transition: border-color .35s ease, background-color .35s ease, color .35s ease;
+}
+
+/* Reduce/disable if user prefers less motion */
+@media (prefers-reduced-motion: reduce) {
+  html, body, *, *::before, *::after {
+    transition: none !important;
+  }
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px; height: 36px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--fg) 14%, transparent);
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  padding: 0;
+  transition: background .2s ease;
+}
+.theme-toggle:hover {
+  background: color-mix(in oklab, var(--fg) 6%, transparent);
+}
+.theme-toggle svg {
+  width: 20px; height: 20px;
+}
+
+/* Optional: swap icons with a data attribute */
+:root[data-theme="dark"] #icon-moon { display: none; }
+:root[data-theme="light"] #icon-sun { display: none; }

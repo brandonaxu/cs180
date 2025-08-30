@@ -1,0 +1,130 @@
+<link rel="stylesheet" href="../style.css">
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Project 0 — CS180 / 280A</title>
+    <meta name="description" content="Project 0 write‑up for CS180/280A." />
+    <script src="https://unpkg.com/lucide@latest"></script>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="brand">Brandon Xu</div>
+        <div class="subtitle">CS180 / 280A • Fall 2025</div>
+        <nav>
+          <a href="../index.html">← Back to Portfolio</a>
+        <button class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+          <i data-lucide="sun"  class="icon-sun"></i>
+          <i data-lucide="moon" class="icon-moon"></i>
+        </button>
+        </nav>
+      </header>
+
+      <main>
+        <h1>Project 0 — Fun with Filters and Frequencies</h1>
+
+        <section>
+        <h2>Part 1: Selfie: The Wrong Way vs. The Right Way</h2>
+        <div class="gallery-text">
+          <p>After taking the images, it seems that when the camera is very close, my nose and forehead were much larger relative to other parts of my face/head. Stepping back and zooming makes the face look natural since everything is more equal in distance from the camera.</p>
+        </div>
+        <div class="gallery">
+            <figure>
+            <img src="./part_1_images/part1image1.png" alt="Description A" loading="lazy">
+            <figcaption>13mm, close up.</figcaption>
+            </figure>
+
+            <figure>
+            <img src="./part_1_images/part1image2.png" alt="Description B" loading="lazy">
+            <figcaption>24mm, ~3 steps away.</figcaption>
+            </figure>
+
+            <figure>
+            <img src="./part_1_images/part1image3.png" alt="Description C" loading="lazy">
+            <figcaption>24mm, ~5 steps away.</figcaption>
+            </figure>
+
+            <figure>
+            <img src="./part_1_images/part1image4.png" alt="Description D" loading="lazy">
+            <figcaption>24mm, ~7 steps away.</figcaption>
+            </figure>
+        </div>
+        </section>
+
+
+        <section>
+        <h2>Part 2: Architectural Perspective Compression</h2>
+        <div class="gallery-text">
+          <p>Zooming from far away makes all of the objects look squished together because distances seem smaller. Walking closer changes the perspective so nearby things look much bigger than far ones.</p>
+        </div>
+        <div class="gallery">
+            <figure>
+            <img src="./part_2_images/part2image1.png" alt="Description A" loading="lazy">
+            <figcaption>120mm, zoomed in.</figcaption>
+            </figure>
+
+            <figure>
+            <img src="./part_2_images/part2image2.png" alt="Description B" loading="lazy">
+            <figcaption>24mm, normal photo.</figcaption>
+            </figure>
+        </div>
+        </section>
+
+        <section>
+        <h2>Part 3: The Dolly zoom</h2>
+
+        <div class="gallery">
+            <figure>
+            <img src="./part_3_images/part3gif.gif" alt="Description A" loading="lazy">
+            <figcaption>compilation of 5 photos</figcaption>
+            </figure>
+        </div>
+        </section>
+      </main>
+
+      <footer>
+        <p>Built with plain HTML & CSS. Hosted on GitHub Pages. <a href="https://cal-cs180.github.io/fa25/hw/proj0/index.html">Assignment details</a>.</p>
+      </footer>
+    </div>
+    <script>
+      const root = document.documentElement;
+
+      function getInitialTheme() {
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const saved = localStorage.theme;
+        return saved || (systemPrefersDark ? 'dark' : 'light');
+      }
+
+      function applyTheme(theme) {
+        root.setAttribute('data-theme', theme);
+        localStorage.theme = theme;
+      }
+
+      function updateToggleIcons() {
+        const current = root.getAttribute('data-theme') || getInitialTheme();
+        document.querySelectorAll('.theme-toggle').forEach((btn) => {
+          btn.innerHTML = `<i data-lucide="${current === 'dark' ? 'sun' : 'moon'}"></i>`;
+        });
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+          window.lucide.createIcons();
+        }
+      }
+
+      // Initialize
+      applyTheme(getInitialTheme());
+      updateToggleIcons();
+
+      // Wire up events for all toggles
+      document.querySelectorAll('.theme-toggle').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const current = root.getAttribute('data-theme');
+          const next = current === 'dark' ? 'light' : 'dark';
+          applyTheme(next);
+          updateToggleIcons();
+        });
+      });
+    </script>
+  </body>
+</html>
