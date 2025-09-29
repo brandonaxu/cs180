@@ -1,0 +1,625 @@
+<link rel="stylesheet" href="../style.css">
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Project 1 — CS180 / 280A</title>
+    <meta name="description" content="Project 0 write-up for CS180/280A." />
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [['\\(','\\)'], ['$', '$']],
+          displayMath: [['\\[','\\]'], ['$$','$$']]
+        },
+        options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+      };
+    </script>
+    <script id="MathJax-script" async
+            src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="brand">Brandon Xu</div>
+        <div class="subtitle">CS180 / 280A • Fall 2025</div>
+        <nav>
+          <a href="../index.html">← Back to Portfolio</a>
+          <button class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <i data-lucide="sun" class="icon-sun"></i>
+            <i data-lucide="moon" class="icon-moon"></i>
+          </button>
+        </nav>
+      </header>
+
+  <main>
+    <section id="part-1">
+      <h2>Part 1 — Fun with Filters</h2>
+
+      <section id="part-1-1">
+        <h3>1.1 Convolutions from Scratch</h3>
+
+        <div class="twocol" style="margin-top:12px;">
+          <div>
+            <div class="gallery">
+              <figure>
+                <img src="1_1_images/input1_1.png" alt="Original headshot (grayscale input)">
+                <figcaption>Input (converted to grayscale): self portrait.</figcaption>
+              </figure>
+              <figure>
+                <img src="1_1_images/output1_1_four_loops_9x9.png" alt="Box filter result with four loops">
+                <figcaption>9×9 box filter — naive 4-loop implementation.</figcaption>
+              </figure>
+              <figure>
+                <img src="1_1_images/output1_1_two_loops_9x9.png" alt="Box filter result with two loops">
+                <figcaption>9×9 box filter — 2-loop implementation.</figcaption>
+              </figure>
+              <figure>
+                <img src="1_1_images/output1_1_two_loops_dx.png" alt="Finite difference Dx result">
+                <figcaption>Finite difference in D<sub>x</sub>.</figcaption>
+              </figure>
+              <figure>
+                <img src="1_1_images/output1_1_two_loops_dy.png" alt="Finite difference Dy result">
+                <figcaption>Finite difference in D<sub>y</sub>.</figcaption>
+              </figure>
+            </div>
+          </div>
+                  <div class='subproblem'>
+            <p>
+                These are helper functions for my convolutions
+            </p>
+            <h4>Padding</h4>
+            <pre><code>
+def pad_zero(img, kh, kw):
+    ph, pw = kh//2, kw//2
+    if img.ndim == 2:
+        return np.pad(img, ((ph,ph),(pw,pw)), mode='constant')
+    else:
+        return img
+            </code></pre>
+
+            <h4>Flipping</h4>
+            <pre><code>
+def flip_kernel(k):
+    return np.flip(np.flip(k,0),1)
+            </code></pre>
+
+            <h4>Finite Difference and Box Filter</h4>
+            <pre><code>
+D_x = np.array([[0, 0, 0], [1, 0, -1], [0, 0, 0]])
+D_y = np.array([[0, 1, 0], [0, 0, 0], [0, -1, 0]])
+
+box_filter_9x9 = np.ones((9, 9)) / 81.0
+            </code></pre>
+            <h4>Naive approach using 4 for-loops</h4>
+                <pre><code>
+def convolution_2d_four_loops(img, kernel):
+    kh, kw = kernel.shape
+    kf = flip_kernel(kernel)
+    ip = pad_zero(img, kh, kw)
+    H, W = img.shape
+    out = np.zeros_like(img, dtype=float)
+    for i in range(H):
+        for j in range(W):
+            s = 0.0
+            for u in range(kh):
+                for v in range(kw):
+                    s += ip[i+u, j+v] * kf[u,v]
+            out[i,j] = s
+    return out
+                </code></pre>  
+            <h4>Naive approach using 2 for-loops</h4>
+                <pre><code> 
+def convolution_2d_two_loops(img, kernel):
+    kh, kw = kernel.shape
+    kf = flip_kernel(kernel)
+    ip = pad_zero(img, kh, kw)
+    H, W = img.shape
+    out = np.zeros_like(img, dtype=float)
+    for i in range(H):
+        for j in range(W):
+            out[i,j] = np.sum(ip[i:i+kh, j:j+kw] * kf)
+    return out
+                </code></pre>
+            <p>
+                The convolution using 4 for-loops takes about <b>8 seconds</b> to run.
+            </p>
+
+            <p>
+                The convolution using 2 for-loops takes about <b>1 second</b> to run.
+            </p>
+
+            <p>
+                The runtime of both the two-loop and four-loop convolutions depend on the size of the kernel and the size of the image, with the runtime being <code>O(W*H*KW*KH)</code>. W * H being the Width and Height of the image, and KW and KH being the Width and Height of the kernel. The two-loop implementation is faster because it uses numpy to speed up elementwise multiplication, summation, and slicing.
+            </p>
+
+            <p>
+I handled boundaries using zero-padding. This was done to ensure that the output size is the same size as the input, I manually added kh // 2 pixels with zero values on the top and bottom, and kw // 2 zero-value pixels on the left and right using the pad_zero function.
+            </p>
+        </div>
+      </section>
+
+      <section id="part-1-2">
+        <h3>1.2 Finite Difference Operator</h3>
+        <p>In this part, I explored the finite difference operator along with gradient magnitude and binarized edge images. I used a threshold of 35 to create my binary edge image, chosen after testing multiples of 10 between 0 and 100. Between 30 and 40, I found that most background noise was removed while retaining some building edges and nearly all edges of the cameraman and camera. In the end, I chose 35 as a balanced middle ground.</p>
+        <div class="gallery">
+          <figure>
+            <img src="1_2_images/output1_2_dx.png" alt="Partial derivative in x">
+            <figcaption>∂I/∂x via D<sub>x</sub>.</figcaption>
+          </figure>
+          <figure>
+            <img src="1_2_images/output1_2_dy.png" alt="Partial derivative in y">
+            <figcaption>∂I/∂y via D<sub>y</sub>.</figcaption>
+          </figure>
+          <figure>
+            <img src="1_2_images/output1_2_dx_dy.png" alt="Combined gradients visualization">
+            <figcaption>Combined gradient visualization. (Applying both D<sub>x</sub> and D<sub>y</sub></figcaption>
+          </figure>
+          <figure>
+            <img src="1_2_images/convolved_output1_2.png" alt="Gradient magnitude image">
+            <figcaption>Gradient magnitude image.</figcaption>
+          </figure>
+          <figure>
+            <img src="1_2_images/binarized_output1_2.png" alt="Binarized edge image">
+            <figcaption>Binarized edge image after thresholding.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="part-1-3">
+        <h3>1.3 Derivative of Gaussian (DoG) Filter</h3>
+        <p>Here, I continued using the threshold of 35 to compare differences between the images from part 1.2. When applying the Gaussian filter, it becomes clear that the edges appear weaker overall. Additionally, there are fewer so-called "outlier" edges because the Gaussian filter smooths them out. As a result, when creating the edge image, it became much easier for the important edges to stand out.</p>
+        <div class="gallery">
+          <figure>
+            <img src="1_3_images/convolved_output1_3_final_part_1.png" alt="Gaussian smoothed / DoG result 1">
+            <figcaption>Gradient Magnitude image from first applying gaussian and then D<sub>x</sub> and D<sub>y</sub>.</figcaption>
+          </figure>
+          <figure>
+            <img src="1_3_images/convolved_output1_3_final_part_2.png" alt="Gaussian smoothed / DoG result 2">
+            <figcaption>Gradient Magnitude image from convolving gaussian with D<sub>x</sub> and D<sub>y</sub> first, and then convolving with the image.</figcaption>
+          </figure>
+          <figure>
+            <img src="1_3_images/binarized_output1_3_final_part_1.png" alt="Binarized DoG edges 1">
+            <figcaption>Binarized Edge image from first applying gaussian and then D<sub>x</sub> and D<sub>y</sub>.</figcaption>
+          </figure>
+          <figure>
+            <img src="1_3_images/binarized_output1_3_final_part_2.png" alt="Binarized DoG edges 2">
+            <figcaption>Binarized Edge image from convolving gaussian with D<sub>x</sub> and D<sub>y</sub> first, and then convolving with the image.</figcaption>
+          </figure>
+        </div>
+      </section>
+    </section>
+
+    <section id="part-2">
+      <h2>Part 2 — Fun with Frequencies</h2>
+
+      <section id="part-2-1">
+        <h3>2.1 Image “Sharpening” (Unsharp Mask)</h3>
+        <p>The unsharp mask filter sharpens an image by subtracting a blurred version of the image (which contains mostly low frequencies) from the original, effectively isolating and amplifying the high-frequency details like edges and fine textures. This process enhances contrast at edges, making the image appear sharper while leaving uniform areas mostly unchanged.</p>
+
+        <h4>Inputs</h4>
+        <div class="gallery">
+          <figure>
+            <img src="2_1_images/taj.jpg" alt="Taj Mahal input">
+            <figcaption>Taj Mahal — input image.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_1_images/gabba.jpeg" alt="Gabba input (blurry)">
+            <figcaption>Gabba — input.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_1_images/sharp_photo.jpg" alt="Sharp reference input">
+            <figcaption>Sharp photo of a waterfall — input.</figcaption>
+          </figure>
+        </div>
+        <h4>Outputs</h4>
+        <div class="gallery">
+          <figure>
+            <img src="2_1_images/output2_1.png" alt="Sharpened Gabba result">
+            <figcaption>Sharpened — Taj mahal with alpha=1.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_1_images/output2_1_gabba.png" alt="Sharpened Gabba result">
+            <figcaption>Sharpened — Gabba with alpha=2.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_1_images/output2_1_sharp_photo_blur.png" alt="Sharp photo input">
+            <figcaption>Input — Sharp photo after being blurred with Gaussian (alpha=3).</figcaption>
+          </figure>
+          <figure>
+            <img src="2_1_images/output2_1_sharp_photo.png" alt="Sharpened after re-blur">
+            <figcaption>Sharpened after re-blur (sharpened with alpha=3).</figcaption>
+          </figure>
+        </div>
+        <div class="callout">
+      After resharpening the photo, it still remained blurry but was able to become slightly clearer. (It's a little hard to notice)
+        </div>
+        <h4>Results: Taj Mahal (varying sharpening amount)</h4>
+        <div class="gallery">
+          <figure>
+            <img src="2_1_images/output2_1.png" alt="Sharpened Taj result">
+            <figcaption>Sharpened Taj (default setting).</figcaption>
+          </figure>
+          <figure>
+            <img src="2_1_images/output2_1_sharpness0.png" alt="Sharpening amount = 2">
+            <figcaption>Sharpening amount — alpha = 2.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_1_images/output2_1_sharpness1.png" alt="Sharpening amount = 4">
+            <figcaption>Sharpening amount — alpha = 4.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_1_images/output2_1_sharpness2.png" alt="Sharpening amount = 6">
+            <figcaption>Sharpening amount — alpha = 6.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_1_images/output2_1_sharpness3.png" alt="Sharpening amount = 8">
+            <figcaption>Sharpening amount — alpha = 8.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_1_images/output2_1_sharpness4.png" alt="Sharpening amount = 10">
+            <figcaption>Sharpening amount — alpha = 10.</figcaption>
+          </figure>
+        </div>
+
+    <div class="callout">
+      As the sharpening amount changes, it goes from being so-called "more clear" to being disorienting. This is because the sharpening effect is becoming stronger.
+    </div>
+      </section>
+
+      <section id="part-2-2">
+        <h3>2.2 Hybrid Images</h3>
+        <p>The first step in creating hybrid images is to carefully align the two images so that their key features overlap. In the example below, the skull image was adjusted and aligned to match the face image. Once the images are aligned, the next task is to determine two cutoff frequencies: one for extracting high-frequency details and another for capturing low-frequency information. Using these values, I applied a high-pass filter to one image to isolate its fine details and a low-pass filter to the other image to retain its smooth, broader structures. Finally, the filtered images were combined by averaging them to create the hybrid image. Up close, the viewer perceives the high-frequency image, while at a distance, the low-frequency image becomes dominant.</p>
+
+        <h4>Pipeline Example: Portrait + Skull</h4>
+        <div class="gallery">
+          <figure>
+            <img src="2_2_images/portrait.jpg" alt="Portrait input">
+            <figcaption>Input A — Portrait.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/skull.jpeg" alt="Skull input">
+            <figcaption>Input B — Skull.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/output2_2_portrait_skull_aligned_1.png" alt="Aligned portrait">
+            <figcaption>Aligned A.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/output2_2_portrait_skull_aligned_2.png" alt="Aligned skull">
+            <figcaption>Aligned B.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/output2_2_portrait_skull_filtered_1_high.png" alt="High-pass A">
+            <figcaption>High-pass filter on the portrait.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/output2_2_portrait_skull_filtered_2_low.png" alt="Low-pass B">
+            <figcaption>Low-pass filter on the skull.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/output2_2_portrait_skull2_15.png" alt="Hybrid portrait+skull">
+            <figcaption>Hybrid result.</figcaption>
+          </figure>
+        </div>
+
+        <h4>Frequency Analysis (Log magnitude of FFT)</h4>
+        <div class="gallery">
+          <figure>
+            <img src="2_2_images/Figure_1.png" alt="FFT of input image 1">
+            <figcaption>FFT — Input A.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/Figure_2.png" alt="FFT of input image 2">
+            <figcaption>FFT — Input B.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/Figure_3.png" alt="FFT of low-passed component">
+            <figcaption>FFT — Low-frequency component.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/Figure_4.png" alt="FFT of high-passed component">
+            <figcaption>FFT — High-frequency component.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/Figure_5.png" alt="FFT of hybrid image">
+            <figcaption>FFT — Hybrid image.</figcaption>
+          </figure>
+        </div>
+
+        <h4>More Hybrids</h4>
+        <div class="gallery">
+          <figure>
+            <img src="2_2_images/einstein.jpg" alt="Einstein input">
+            <figcaption>Input — Einstein.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/monroe.jpeg" alt="Monroe input">
+            <figcaption>Input — Monroe.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/output2_2_einstein_monroe2_10.png" alt="Einstein + Monroe hybrid">
+            <figcaption>Hybrid — Einstein + Monroe.</figcaption>
+          </figure>
+        </div>
+        <div class="gallery">
+          <figure>
+            <img src="2_2_images/biden.jpg" alt="Biden input">
+            <figcaption>Input — Biden.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/squirrel.jpg" alt="Squirrel input">
+            <figcaption>Input — Squirrel.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/output2_2_biden_squirrel_2_15.png" alt="Biden + Squirrel hybrid">
+            <figcaption>Hybrid — Biden + Squirrel.</figcaption>
+          </figure>
+        </div>
+        <div class="gallery">
+          <figure>
+            <img src="2_2_images/DerekPicture.jpg" alt="Derek input">
+            <figcaption>Input — Derek (sample pair).</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/nutmeg.jpg" alt="Nutmeg input">
+            <figcaption>Input — Nutmeg (sample pair).</figcaption>
+          </figure>
+          <figure>
+            <img src="2_2_images/output2_2_hybrid_example2_15.png" alt="Additional hybrid example">
+            <figcaption>Output.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="part-2-3-4">
+        <h3>2.3 + 2.4 Gaussian/Laplacian Stacks and Multiresolution Blending</h3>
+
+        <h4>Inputs (Oraple)</h4>
+        <div class="gallery">
+          <figure>
+            <img src="2_3_2_4_images/apple.jpeg" alt="Apple input">
+            <figcaption>Input — Apple.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_3_2_4_images/orange.jpeg" alt="Orange input">
+            <figcaption>Input — Orange.</figcaption>
+          </figure>
+        </div>
+
+        <h4>Gaussian Stacks</h4>
+        <p>To create the Gaussian stack, I started with the original image as the first level. I then applied a Gaussian blur to the image to produce a slightly smoother version. This blurred image was added to the stack. I repeated this process, applying the Gaussian filter to the most recently blurred image each time.</p>
+
+        <h5>Gaussian Stacks - Apple</h5>
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/apple_gaussian_level_0.png"></figure>
+          <figure><img src="2_3_2_4_images/apple_gaussian_level_1.png"></figure>
+          <figure><img src="2_3_2_4_images/apple_gaussian_level_2.png"></figure>
+        </div>
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/apple_gaussian_level_3.png"></figure>
+          <figure><img src="2_3_2_4_images/apple_gaussian_level_4.png"></figure>
+          <figure><img src="2_3_2_4_images/apple_gaussian_level_5.png"></figure>
+        </div>
+
+        <h5>Gaussian Stacks - Orange</h5>
+
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/orange_gaussian_level_0.png"></figure>
+          <figure><img src="2_3_2_4_images/orange_gaussian_level_1.png"></figure>
+          <figure><img src="2_3_2_4_images/orange_gaussian_level_2.png"></figure>
+        </div>
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/orange_gaussian_level_3.png"></figure>
+          <figure><img src="2_3_2_4_images/orange_gaussian_level_4.png"></figure>
+          <figure><img src="2_3_2_4_images/orange_gaussian_level_5.png"></figure>
+        </div>
+
+        <h4>Laplacian Stacks</h4>
+        <p>To create the Laplacian stack, I started with the completed Gaussian stack. For each pair of consecutive Gaussian images, I subtracted the more blurred image from the less blurred image.
+
+        The process was repeated for each level, producing a new image for each subtraction. The final level of the Laplacian stack is simply the most blurred image from the Gaussian stack.</p>
+        <h5>Laplacian Stacks - Apple</h5>
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/apple_laplacian_level_0.png"></figure>
+          <figure><img src="2_3_2_4_images/apple_laplacian_level_1.png"></figure>
+          <figure><img src="2_3_2_4_images/apple_laplacian_level_2.png"></figure>
+        </div>
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/apple_laplacian_level_3.png"></figure>
+          <figure><img src="2_3_2_4_images/apple_laplacian_level_4.png"></figure>
+          <figure><img src="2_3_2_4_images/apple_laplacian_level_5.png"></figure>
+        </div>
+        <h5>Laplacian Stacks - Orange</h5>
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/orange_laplacian_level_0.png"></figure>
+          <figure><img src="2_3_2_4_images/orange_laplacian_level_1.png"></figure>
+          <figure><img src="2_3_2_4_images/orange_laplacian_level_2.png"></figure>
+        </div>
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/orange_laplacian_level_3.png"></figure>
+          <figure><img src="2_3_2_4_images/orange_laplacian_level_4.png"></figure>
+          <figure><img src="2_3_2_4_images/orange_laplacian_level_5.png"></figure>
+        </div>
+
+        <h4>Mask (Alpha=5)</h4>
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/mask_level_0.png"></figure>
+          <figure><img src="2_3_2_4_images/mask_level_1.png"></figure>
+          <figure><img src="2_3_2_4_images/mask_level_2.png"></figure>
+        </div>
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/mask_level_3.png"></figure>
+          <figure><img src="2_3_2_4_images/mask_level_4.png"></figure>
+          <figure><img src="2_3_2_4_images/mask_level_5.png"></figure>
+        </div>
+
+        <h4>Oraple: Laplacian Blending with Stacks</h4>
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/apple_masked_laplacian_level_0.png"></figure>
+          <figure><img src="2_3_2_4_images/orange_masked_laplacian_level_0.png"></figure>
+          <figure><img src="2_3_2_4_images/laplacian_blend_0.png"></figure>
+        </div>
+
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/apple_masked_laplacian_level_2.png"></figure>
+          <figure><img src="2_3_2_4_images/orange_masked_laplacian_level_2.png"></figure>
+          <figure><img src="2_3_2_4_images/laplacian_blend_2.png"></figure>
+        </div>
+
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/apple_masked_laplacian_level_4.png"></figure>
+          <figure><img src="2_3_2_4_images/orange_masked_laplacian_level_4.png"></figure>
+          <figure><img src="2_3_2_4_images/laplacian_blend_4.png"></figure>
+        </div>
+
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/apple_masked_laplacian_level_5.png"></figure>
+          <figure><img src="2_3_2_4_images/orange_masked_laplacian_level_5.png"></figure>
+          <figure><img src="2_3_2_4_images/laplacian_blend_5.png"></figure>
+        </div>
+        <div class="callout">
+        The left and middle columns show levels 0, 2, 4, and the final output of the Laplacian mask on the apple and orange, respectively. The right column shows levels 0, 2, 4, and the final output of the Laplacian blend. The Laplacian masks were created by multiplying the mask stack with the Laplacian stack for both the apple and the orange. The Laplacian blend was then created by adding these two Laplacian masks together. Alpha values of 2 were used to build the gaussian stack for the apple and orange.
+        </div>
+        <h4>Final Output</h4>
+        <figure><img src="2_3_2_4_images/laplacian_blend_final.png"></figure>
+        <div class="callout">
+        This image is the collapsed final image with all the laplacian blends added together with the final layer of the gaussians for the apple and orange.
+        </div>
+
+        <h4>Custom Blends</h4>
+        <h4>Hand + Face (Irregular Mask)</h4>
+        <div class="gallery">
+          <figure>
+            <img src="2_3_2_4_images/face.jpeg" alt="Face input">
+            <figcaption>Input — Face.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_3_2_4_images/hand.jpeg" alt="Hand input">
+            <figcaption>Input — Hand.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_3_2_4_images/face_hand_laplacian_blend_final.png" alt="Face+Hand irregular mask blend">
+            <figcaption>Blend — Face + Hand (irregular mask).</figcaption>
+          </figure>
+        </div>
+        <h4>Hand + Face: Laplacian Blending with Stacks</h4>
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/hand_masked_laplacian_level_0.png"></figure>
+          <figure><img src="2_3_2_4_images/face_masked_laplacian_level_0.png"></figure>
+          <figure><img src="2_3_2_4_images/face_hand_laplacian_blend_0.png"></figure>
+        </div>
+
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/hand_masked_laplacian_level_2.png"></figure>
+          <figure><img src="2_3_2_4_images/face_masked_laplacian_level_2.png"></figure>
+          <figure><img src="2_3_2_4_images/face_hand_laplacian_blend_2.png"></figure>
+        </div>
+
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/hand_masked_laplacian_level_4.png"></figure>
+          <figure><img src="2_3_2_4_images/face_masked_laplacian_level_4.png"></figure>
+          <figure><img src="2_3_2_4_images/face_hand_laplacian_blend_4.png"></figure>
+        </div>
+
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/hand_masked_laplacian_level_5.png"></figure>
+          <figure><img src="2_3_2_4_images/face_masked_laplacian_level_5.png"></figure>
+          <figure><img src="2_3_2_4_images/face_hand_laplacian_blend_5.png"></figure>
+        </div>
+        <p>One of the big issues that I had with this combination was tuning the alpha values of my gaussian stack. The final collapsed blend had an imprint of the face left on it so a greater alpha value was needed for the gaussian stack in order to have it disappear in the final blend. In the end, I used an alpha value of 15 for the face and an alpha value of 2 for the hand.</p>
+        <h4>Cheetah + Lioness</h4>
+
+        <div class="gallery">
+          <figure>
+            <img src="2_3_2_4_images/cheetah.jpeg" alt="Cheetah input">
+            <figcaption>Input — Cheetah.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_3_2_4_images/lioness.jpeg" alt="Lioness input">
+            <figcaption>Input — Lioness.</figcaption>
+          </figure>
+          <figure>
+            <img src="2_3_2_4_images/cheetah_lion_laplacian_blend_final.png" alt="Cheetah+Lioness irregular mask blend">
+            <figcaption>Blend — Cheetah + Lioness.</figcaption>
+          </figure>
+        </div>
+
+        <h4>Cheetah + Lioness: Laplacian Blending with Stacks</h4>
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/lioness_masked_laplacian_level_0.png"></figure>
+          <figure><img src="2_3_2_4_images/cheetah_masked_laplacian_level_0.png"></figure>
+          <figure><img src="2_3_2_4_images/cheetah_lioness_laplacian_blend_0.png"></figure>
+        </div>
+
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/lioness_masked_laplacian_level_2.png"></figure>
+          <figure><img src="2_3_2_4_images/cheetah_masked_laplacian_level_2.png"></figure>
+          <figure><img src="2_3_2_4_images/cheetah_lioness_laplacian_blend_2.png"></figure>
+        </div>
+
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/lioness_masked_laplacian_level_4.png"></figure>
+          <figure><img src="2_3_2_4_images/cheetah_masked_laplacian_level_4.png"></figure>
+          <figure><img src="2_3_2_4_images/cheetah_lioness_laplacian_blend_4.png"></figure>
+        </div>
+
+        <div class="gallery">
+          <figure><img src="2_3_2_4_images/lioness_masked_laplacian_level_5.png"></figure>
+          <figure><img src="2_3_2_4_images/cheetah_masked_laplacian_level_5.png"></figure>
+          <figure><img src="2_3_2_4_images/cheetah_lioness_laplacian_blend_5.png"></figure>
+        </div>
+        <p>Alpha values of 2 were used for both the cheetah and lioness to construct the gaussian stacks.</p>
+      </section>
+    </section>
+  </main>
+
+      <footer>
+        <p>
+          Built with plain HTML & CSS. Hosted on GitHub Pages. 
+          <a href="https://cal-cs180.github.io/fa25/hw/proj2/index.html">Assignment details</a>.
+        </p>
+      </footer>
+    </div>
+
+    <script>
+      const root = document.documentElement;
+
+      function getInitialTheme() {
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const saved = localStorage.theme;
+        return saved || (systemPrefersDark ? 'dark' : 'light');
+      }
+
+      function applyTheme(theme) {
+        root.setAttribute('data-theme', theme);
+        localStorage.theme = theme;
+      }
+
+      function updateToggleIcons() {
+        const current = root.getAttribute('data-theme') || getInitialTheme();
+        document.querySelectorAll('.theme-toggle').forEach((btn) => {
+          btn.innerHTML = `<i data-lucide="${current === 'dark' ? 'sun' : 'moon'}"></i>`;
+        });
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+          window.lucide.createIcons();
+        }
+      }
+
+      // Initialize
+      applyTheme(getInitialTheme());
+      updateToggleIcons();
+
+      // Wire up events for all toggles
+      document.querySelectorAll('.theme-toggle').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const current = root.getAttribute('data-theme');
+          const next = current === 'dark' ? 'light' : 'dark';
+          applyTheme(next);
+          updateToggleIcons();
+        });
+      });
+    </script>
+  </body>
+</html>
