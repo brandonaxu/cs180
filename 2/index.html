@@ -270,9 +270,10 @@ I handled boundaries using zero-padding. This was done to ensure that the output
 
       <section id="part-2-2">
         <h3>2.2 Hybrid Images</h3>
-        <p>The first step in creating hybrid images is to carefully align the two images so that their key features overlap. In the example below, the skull image was adjusted and aligned to match the face image. Once the images are aligned, the next task is to determine two cutoff frequencies: one for extracting high-frequency details and another for capturing low-frequency information. Using these values, I applied a high-pass filter to one image to isolate its fine details and a low-pass filter to the other image to retain its smooth, broader structures. Finally, the filtered images were combined by averaging them to create the hybrid image. Up close, the viewer perceives the high-frequency image, while at a distance, the low-frequency image becomes dominant.</p>
+        <p>The first step in creating hybrid images is to carefully align the two images so that their key features overlap. In the example below, the skull image was adjusted and aligned to match the face image. Once the images are aligned, the next task is to determine two cutoff frequencies: one for extracting high-frequency details and another for capturing low-frequency information. Using these values, I applied a high-pass filter to one image to isolate its fine details and a low-pass filter to the other image to retain its smooth, broader structures. Finally, the filtered images were combined by averaging them to create the hybrid image. Up close, the viewer perceives the high-frequency image, while at a distance, the low-frequency image becomes dominant. The values for the cutoff frequency was determined by manually testing different values.</p>
 
         <h4>Pipeline Example: Portrait + Skull</h4>
+        <p>High Cutoff Frequency = 15, Low Cutoff Frequency = 2</p>
         <div class="gallery">
           <figure>
             <img src="2_2_images/portrait.jpg" alt="Portrait input">
@@ -329,6 +330,7 @@ I handled boundaries using zero-padding. This was done to ensure that the output
         </div>
 
         <h4>More Hybrids</h4>
+        <p>High Cutoff Frequency = 10, Low Cutoff Frequency = 2</p>
         <div class="gallery">
           <figure>
             <img src="2_2_images/einstein.jpg" alt="Einstein input">
@@ -343,6 +345,7 @@ I handled boundaries using zero-padding. This was done to ensure that the output
             <figcaption>Hybrid — Einstein + Monroe.</figcaption>
           </figure>
         </div>
+        <p>High Cutoff Frequency = 15, Low Cutoff Frequency = 2</p>
         <div class="gallery">
           <figure>
             <img src="2_2_images/biden.jpg" alt="Biden input">
@@ -357,6 +360,7 @@ I handled boundaries using zero-padding. This was done to ensure that the output
             <figcaption>Hybrid — Biden + Squirrel.</figcaption>
           </figure>
         </div>
+        <p>High Cutoff Frequency = 15, Low Cutoff Frequency = 2</p>
         <div class="gallery">
           <figure>
             <img src="2_2_images/DerekPicture.jpg" alt="Derek input">
