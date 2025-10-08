@@ -1,0 +1,279 @@
+<link rel="stylesheet" href="../style.css">
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Project 1 — CS180 / 280A</title>
+    <meta name="description" content="Project 0 write-up for CS180/280A." />
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [['\\(','\\)'], ['$', '$']],
+          displayMath: [['\\[','\\]'], ['$$','$$']]
+        },
+        options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+      };
+    </script>
+    <script id="MathJax-script" async
+            src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="brand">Brandon Xu</div>
+        <div class="subtitle">CS180 / 280A • Fall 2025</div>
+        <nav>
+          <a href="../index.html">← Back to Portfolio</a>
+          <button class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <i data-lucide="sun" class="icon-sun"></i>
+            <i data-lucide="moon" class="icon-moon"></i>
+          </button>
+        </nav>
+      </header>
+
+      <main>
+        <h1>Project 1 — Colorizing the Prokudin-Gorskii Photo Collection</h1>
+
+        <section class="gallery-text">
+          <h2>Project Overview</h2>
+      <p>
+        Sergei Prokudin-Gorskii was a pioneer of early color photography who recorded three black-and-white exposures of the same scene through red, green, and blue filters on a single glass plate. When digitized, the plate appears as three vertically stacked grayscale strips. By aligning the strips and stacking them as color channels, we can reconstruct the original color photograph. In this project, I implemented an algorithm that aligns the RGB channels to produce high-precision colorized images.
+      </p>
+
+      <h2>Approach</h2>
+
+      <h3>1) Split the glass plate and remove border artifacts</h3>
+      <p style="margin-bottom: 1.25rem;">
+        Each digitized plate is split into three equal-height images corresponding to
+        <em>blue</em>, <em>green</em>, and <em>red</em> (top → bottom in this dataset).
+        Before alignment, I crop <strong>15%</strong> off every side of each strip to
+        discard dark borders, registration marks, and scanning seams that would
+        dominate any similarity metric. Using a percentage (rather than fixed pixels)
+        keeps the behavior consistent across resolutions.
+      </p>
+
+      <h3>2) Alignment problem and reference choice</h3>
+      <p style="margin-bottom: 1.25rem;">
+        The green channel is used as the reference; the blue and red channels are 
+        shifted to align with it. The task is to find integer shifts 
+        \((\Delta y, \Delta x)\) for the blue and red strips so that 
+        they align to the green strip.
+      </p>
+
+      <h3>3) Score only the true overlap (no wrap-around)</h3>
+      <p style="margin-bottom: 1.25rem;">
+        For a candidate shift \((\Delta y, \Delta x)\), I compare only the
+        <em>valid overlapping region</em> of the two images (i.e., after virtually
+        shifting, the non-padded intersection).
+      </p>
+
+      <h3>4) Similarity metric: Normalized Cross-Correlation (NCC)</h3>
+      <p style="margin-bottom: 1.25rem;">
+        I evaluate the alignment using Normalized Cross-Correlation (NCC) as the similarity metric.
+Unlike a simpler metric such as the L2 norm, which is overly sensitive to brightness variations between filters, NCC is more robust to these differences.
+A higher NCC value indicates better alignment, so the goal is to find the displacement that produces the maximum NCC score. For overlap patches
+        \(A\) (reference) and \(B\) (shifted), with means \(\bar{A}\) and \(\bar{B}\),
+      </p>
+      <p style="margin: -0.25rem 0 1rem 0;">
+        \[
+        \mathrm{NCC}(A,B)=\frac{\sum (A-\bar{A})\,(B-\bar{B})}
+        {\sqrt{\sum (A-\bar{A})^2}\;\sqrt{\sum (B-\bar{B})^2}}
+        \]
+      </p>
+
+      <h3>5) Small images (JPG set): exhaustive local search</h3>
+      <p style="margin-bottom: 1.25rem;">
+        For “JPG-sized” inputs, displacements are modest, so I run an exhaustive
+        search over \(\Delta y,\Delta x\in[-15,15]\) and take the best NCC.
+      </p>
+
+      <h3>6) Large images (TIF set): coarse-to-fine pyramid search</h3>
+      <p style="margin-bottom: 0.75rem;">
+        TIF images are much larger and can require shifts &gt;50 px, making a single
+        brute-force search expensive. I instead use a Gaussian pyramid to estimate
+        large displacements coarsely, then refine them at higher resolutions.
+      </p>
+
+      <ul style="margin-top: 0; margin-bottom: 1rem;">
+        <li style="margin-bottom: 0.5rem;">
+          <strong>6.1 Build the pyramid.</strong> Starting from the original strip,
+          I took inspiration from lecture on September 11 and applied a 
+          <em>Gaussian blur</em> (σ = 1.0, truncated at 3σ) and
+          <em>downsample by 2</em>. Blurring before subsampling suppresses high
+          frequencies that would alias. I repeat until the smallest side is near
+          100 px. The coarsest level contains the largest structures; successive levels
+          double the resolution.
+        </li>
+        <li style="margin-bottom: 0.5rem;">
+          <strong>6.2 Coarse initialization.</strong> At the coarsest level, I run a
+          small exhaustive search (radius scaled down from 15, minimum 2 px) to get an
+          initial shift estimate.
+        </li>
+        <li style="margin-bottom: 0.5rem;">
+          <strong>6.3 Upscale and refine.</strong> I propagate the estimate upward by
+          doubling \((\Delta y,\Delta x)\) and then refine it with a <em>local</em>
+          NCC search in a small window (radius = 4) around the propagated center.
+          This repeats until the finest (original) resolution is reached.
+        </li>
+        <li>
+          <strong>6.4 Output.</strong> The final shifts for blue→green and red→green
+          are returned at full resolution.
+        </li>
+      </ul>
+
+      <h4 style="margin-top: 0.25rem;">Gaussian blur details</h4>
+      <p style="margin-bottom: 1.25rem;">
+        The 1-D Gaussian kernel is \(g(x)=\exp(-x^2/(2\sigma^2))\) normalized to sum
+        to 1. I convolve horizontally and vertically (separable filtering) with
+        reflect padding for efficiency and to avoid dark borders.
+      </p>
+
+      <h3>7) Compose the color image</h3>
+      <p style="margin-bottom: 1.25rem;">
+        With the estimated shifts, I shift the blue and red strips accordingly and
+        stack channels as <code>[R, G, B]</code> to produce the final color image.
+        The shift applied at this stage uses circular rolling purely to place pixels;
+        similarity scoring never relied on wrap-around thanks to the “valid overlap”
+        logic during NCC evaluation.
+      </p>
+
+          <h2>Challenges and Improvements</h2>
+          <p style="margin-bottom: 1.5rem;">
+            The first challenge I encountered was dealing with the borders of the images. The dark edges and registration marks could skew the alignment if included in the NCC calculation. To address this, I cropped 15% off each side of the strips before processing, which significantly improved alignment accuracy.
+          </p>
+          <p style="margin-bottom: 1.5rem;">
+            The second challenge I had was with aligning Emir. At the start I was aligning the red and green channels to the blue channel, but noticed that the red channel was still misaligned. To fix this, I set the green channel as the reference and aligned the blue and red channels to it instead, which produced a much better result. The reasoning for this is because green is between blue and red in the spectrum, allowing for a smaller window needed for alignment
+          </p>
+        </section>
+
+        <section>
+          <h2>Part 1: Required Images</h2>
+          <div class="gallery">
+            <figure>
+              <img src="./part_1_images/gaussian_cathedral.jpg" alt="Description A" loading="lazy">
+              <figcaption>Cathedral<br>B shift: (-5, -2) R shift: (7, 1).</figcaption>
+            </figure>
+            <figure>
+              <img src="./part_1_images/gaussian_monastery.jpg" alt="Description B" loading="lazy">
+              <figcaption>Monastery<br>B shift: (3, -2) R shift: (6, 1)</figcaption>
+            </figure>
+            <figure>
+              <img src="./part_1_images/gaussian_tobolsk.jpg" alt="Description C" loading="lazy">
+              <figcaption>Tobolsk<br>B shift: (-3, -3) R shift: (4, 1)</figcaption>
+            </figure>
+            <figure>
+              <img src="./part_2_images/gaussian_church.jpg" alt="church" loading="lazy">
+              <figcaption>Church<br>B shift: (-25, -4) R shift: (33, -8)</figcaption>
+            </figure>
+            <figure>
+              <img src="./part_2_images/gaussian_emir.jpg" alt="emir" loading="lazy">
+              <figcaption>Emir<br>B shift: (-49, -24) R shift: (57, 17)</figcaption>
+            </figure>
+            <figure>
+              <img src="./part_2_images/gaussian_harvesters.jpg" alt="harvesters" loading="lazy">
+              <figcaption>Harvesters<br>B shift: (-59, -17) R shift: (65, -3)</figcaption>
+            </figure>
+            <figure>
+              <img src="./part_2_images/gaussian_icon.jpg" alt="icon" loading="lazy">
+              <figcaption>Icon<br>B shift: (-41, -17) R shift: (48, 5)</figcaption>
+            </figure>
+            <figure>
+              <img src="./part_2_images/gaussian_italil.jpg" alt="italil" loading="lazy">
+              <figcaption>Italil<br>B shift: (-38, -21) R shift: (39, 15)</figcaption>
+            </figure>
+            <figure>
+              <img src="./part_2_images/gaussian_lastochikino.jpg" alt="lastochikino" loading="lazy">
+              <figcaption>Lastochikino<br>B shift: (3, 2) R shift: (78, -7)</figcaption>
+            </figure>
+            <figure>
+              <img src="./part_2_images/gaussian_lugano.jpg" alt="lugano" loading="lazy">
+              <figcaption>Lugano<br>B shift: (-41, 16) R shift: (52, -13)</figcaption>
+            </figure>
+            <figure>
+              <img src="./part_2_images/gaussian_melons.jpg" alt="melons" loading="lazy">
+              <figcaption>Melons<br>B shift: (-82, -11) R shift: (92, 3)</figcaption>
+            </figure>
+            <figure>
+              <img src="./part_2_images/gaussian_self_portrait.jpg" alt="self_portrait" loading="lazy">
+              <figcaption>Self Portrait<br>B shift: (-79, -29) R shift: (92, 7)</figcaption>
+            </figure>
+            <figure>
+              <img src="./part_2_images/gaussian_siren.jpg" alt="siren" loading="lazy">
+              <figcaption>Siren<br>B shift: (-49, 6) R shift: (47, -19)</figcaption>
+            </figure>
+            <figure>
+              <img src="./part_2_images/gaussian_three_generations.jpg" alt="three_generations" loading="lazy">
+              <figcaption>Three Generations<br>B shift: (-52, -14) R shift: (59, -3)</figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section>
+          <h2>Part 2: My Selected Images</h2>
+          <div class="gallery">
+            <figure>
+              <img src="./part_3_images/gaussian_floodgates.jpg" alt="Description A" loading="lazy">
+              <figcaption>Floodgates<br>B shift: (-3, 1) R shift: (6, -1)</figcaption>
+            </figure>
+            <figure>
+              <img src="./part_3_images/gaussian_milan_cathedral.jpg" alt="Description A" loading="lazy">
+              <figcaption>Milan Cathedral<br>B shift: (-6, -1) R shift: (7, 1)</figcaption>
+            </figure>
+            <figure>
+              <img src="./part_3_images/gaussian_sacks.jpg" alt="Description A" loading="lazy">
+              <figcaption>Sacks<br>B shift: (-5, -3) R shift: (7, -1)</figcaption>
+            </figure>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <p>
+          Built with plain HTML & CSS. Hosted on GitHub Pages. 
+          <a href="https://cal-cs180.github.io/fa25/hw/proj3/partA.html">Assignment details</a>.
+        </p>
+      </footer>
+    </div>
+
+    <script>
+      const root = document.documentElement;
+
+      function getInitialTheme() {
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const saved = localStorage.theme;
+        return saved || (systemPrefersDark ? 'dark' : 'light');
+      }
+
+      function applyTheme(theme) {
+        root.setAttribute('data-theme', theme);
+        localStorage.theme = theme;
+      }
+
+      function updateToggleIcons() {
+        const current = root.getAttribute('data-theme') || getInitialTheme();
+        document.querySelectorAll('.theme-toggle').forEach((btn) => {
+          btn.innerHTML = `<i data-lucide="${current === 'dark' ? 'sun' : 'moon'}"></i>`;
+        });
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+          window.lucide.createIcons();
+        }
+      }
+
+      // Initialize
+      applyTheme(getInitialTheme());
+      updateToggleIcons();
+
+      // Wire up events for all toggles
+      document.querySelectorAll('.theme-toggle').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const current = root.getAttribute('data-theme');
+          const next = current === 'dark' ? 'light' : 'dark';
+          applyTheme(next);
+          updateToggleIcons();
+        });
+      });
+    </script>
+  </body>
+</html>
