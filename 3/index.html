@@ -1,279 +1,547 @@
 <link rel="stylesheet" href="../style.css">
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Project 1 — CS180 / 280A</title>
-    <meta name="description" content="Project 0 write-up for CS180/280A." />
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
-      window.MathJax = {
-        tex: {
-          inlineMath: [['\\(','\\)'], ['$', '$']],
-          displayMath: [['\\[','\\]'], ['$$','$$']]
-        },
-        options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
-      };
-    </script>
-    <script id="MathJax-script" async
-            src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
-  </head>
-  <body>
-    <div class="wrap">
-      <header>
-        <div class="brand">Brandon Xu</div>
-        <div class="subtitle">CS180 / 280A • Fall 2025</div>
-        <nav>
-          <a href="../index.html">← Back to Portfolio</a>
-          <button class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
-            <i data-lucide="sun" class="icon-sun"></i>
-            <i data-lucide="moon" class="icon-moon"></i>
-          </button>
-        </nav>
-      </header>
 
-      <main>
-        <h1>Project 1 — Colorizing the Prokudin-Gorskii Photo Collection</h1>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Project 3 — CS180 / 280A</title>
+  <meta name="description" content="Project 3 write-up for CS180/280A: Image Warping and Mosaicing." />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)'], ['$', '$']],
+        displayMath: [['\\[', '\\]'], ['$$', '$$']]
+      },
+      options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
 
-        <section class="gallery-text">
-          <h2>Project Overview</h2>
-      <p>
-        Sergei Prokudin-Gorskii was a pioneer of early color photography who recorded three black-and-white exposures of the same scene through red, green, and blue filters on a single glass plate. When digitized, the plate appears as three vertically stacked grayscale strips. By aligning the strips and stacking them as color channels, we can reconstruct the original color photograph. In this project, I implemented an algorithm that aligns the RGB channels to produce high-precision colorized images.
-      </p>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">Brandon Xu</div>
+      <div class="subtitle">CS180 / 280A • Fall 2025</div>
+      <nav>
+        <a href="../index.html">← Back to Portfolio</a>
+        <button class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+          <i data-lucide="sun" class="icon-sun"></i>
+          <i data-lucide="moon" class="icon-moon"></i>
+        </button>
+      </nav>
+    </header>
 
-      <h2>Approach</h2>
+    <main>
+      <h1>Project 3 — Image Warping and Mosaicing</h1>
 
-      <h3>1) Split the glass plate and remove border artifacts</h3>
-      <p style="margin-bottom: 1.25rem;">
-        Each digitized plate is split into three equal-height images corresponding to
-        <em>blue</em>, <em>green</em>, and <em>red</em> (top → bottom in this dataset).
-        Before alignment, I crop <strong>15%</strong> off every side of each strip to
-        discard dark borders, registration marks, and scanning seams that would
-        dominate any similarity metric. Using a percentage (rather than fixed pixels)
-        keeps the behavior consistent across resolutions.
-      </p>
-
-      <h3>2) Alignment problem and reference choice</h3>
-      <p style="margin-bottom: 1.25rem;">
-        The green channel is used as the reference; the blue and red channels are 
-        shifted to align with it. The task is to find integer shifts 
-        \((\Delta y, \Delta x)\) for the blue and red strips so that 
-        they align to the green strip.
-      </p>
-
-      <h3>3) Score only the true overlap (no wrap-around)</h3>
-      <p style="margin-bottom: 1.25rem;">
-        For a candidate shift \((\Delta y, \Delta x)\), I compare only the
-        <em>valid overlapping region</em> of the two images (i.e., after virtually
-        shifting, the non-padded intersection).
-      </p>
-
-      <h3>4) Similarity metric: Normalized Cross-Correlation (NCC)</h3>
-      <p style="margin-bottom: 1.25rem;">
-        I evaluate the alignment using Normalized Cross-Correlation (NCC) as the similarity metric.
-Unlike a simpler metric such as the L2 norm, which is overly sensitive to brightness variations between filters, NCC is more robust to these differences.
-A higher NCC value indicates better alignment, so the goal is to find the displacement that produces the maximum NCC score. For overlap patches
-        \(A\) (reference) and \(B\) (shifted), with means \(\bar{A}\) and \(\bar{B}\),
-      </p>
-      <p style="margin: -0.25rem 0 1rem 0;">
-        \[
-        \mathrm{NCC}(A,B)=\frac{\sum (A-\bar{A})\,(B-\bar{B})}
-        {\sqrt{\sum (A-\bar{A})^2}\;\sqrt{\sum (B-\bar{B})^2}}
-        \]
-      </p>
-
-      <h3>5) Small images (JPG set): exhaustive local search</h3>
-      <p style="margin-bottom: 1.25rem;">
-        For “JPG-sized” inputs, displacements are modest, so I run an exhaustive
-        search over \(\Delta y,\Delta x\in[-15,15]\) and take the best NCC.
-      </p>
-
-      <h3>6) Large images (TIF set): coarse-to-fine pyramid search</h3>
-      <p style="margin-bottom: 0.75rem;">
-        TIF images are much larger and can require shifts &gt;50 px, making a single
-        brute-force search expensive. I instead use a Gaussian pyramid to estimate
-        large displacements coarsely, then refine them at higher resolutions.
-      </p>
-
-      <ul style="margin-top: 0; margin-bottom: 1rem;">
-        <li style="margin-bottom: 0.5rem;">
-          <strong>6.1 Build the pyramid.</strong> Starting from the original strip,
-          I took inspiration from lecture on September 11 and applied a 
-          <em>Gaussian blur</em> (σ = 1.0, truncated at 3σ) and
-          <em>downsample by 2</em>. Blurring before subsampling suppresses high
-          frequencies that would alias. I repeat until the smallest side is near
-          100 px. The coarsest level contains the largest structures; successive levels
-          double the resolution.
-        </li>
-        <li style="margin-bottom: 0.5rem;">
-          <strong>6.2 Coarse initialization.</strong> At the coarsest level, I run a
-          small exhaustive search (radius scaled down from 15, minimum 2 px) to get an
-          initial shift estimate.
-        </li>
-        <li style="margin-bottom: 0.5rem;">
-          <strong>6.3 Upscale and refine.</strong> I propagate the estimate upward by
-          doubling \((\Delta y,\Delta x)\) and then refine it with a <em>local</em>
-          NCC search in a small window (radius = 4) around the propagated center.
-          This repeats until the finest (original) resolution is reached.
-        </li>
-        <li>
-          <strong>6.4 Output.</strong> The final shifts for blue→green and red→green
-          are returned at full resolution.
-        </li>
-      </ul>
-
-      <h4 style="margin-top: 0.25rem;">Gaussian blur details</h4>
-      <p style="margin-bottom: 1.25rem;">
-        The 1-D Gaussian kernel is \(g(x)=\exp(-x^2/(2\sigma^2))\) normalized to sum
-        to 1. I convolve horizontally and vertically (separable filtering) with
-        reflect padding for efficiency and to avoid dark borders.
-      </p>
-
-      <h3>7) Compose the color image</h3>
-      <p style="margin-bottom: 1.25rem;">
-        With the estimated shifts, I shift the blue and red strips accordingly and
-        stack channels as <code>[R, G, B]</code> to produce the final color image.
-        The shift applied at this stage uses circular rolling purely to place pixels;
-        similarity scoring never relied on wrap-around thanks to the “valid overlap”
-        logic during NCC evaluation.
-      </p>
-
-          <h2>Challenges and Improvements</h2>
-          <p style="margin-bottom: 1.5rem;">
-            The first challenge I encountered was dealing with the borders of the images. The dark edges and registration marks could skew the alignment if included in the NCC calculation. To address this, I cropped 15% off each side of the strips before processing, which significantly improved alignment accuracy.
-          </p>
-          <p style="margin-bottom: 1.5rem;">
-            The second challenge I had was with aligning Emir. At the start I was aligning the red and green channels to the blue channel, but noticed that the red channel was still misaligned. To fix this, I set the green channel as the reference and aligned the blue and red channels to it instead, which produced a much better result. The reasoning for this is because green is between blue and red in the spectrum, allowing for a smaller window needed for alignment
-          </p>
-        </section>
-
-        <section>
-          <h2>Part 1: Required Images</h2>
-          <div class="gallery">
-            <figure>
-              <img src="./part_1_images/gaussian_cathedral.jpg" alt="Description A" loading="lazy">
-              <figcaption>Cathedral<br>B shift: (-5, -2) R shift: (7, 1).</figcaption>
-            </figure>
-            <figure>
-              <img src="./part_1_images/gaussian_monastery.jpg" alt="Description B" loading="lazy">
-              <figcaption>Monastery<br>B shift: (3, -2) R shift: (6, 1)</figcaption>
-            </figure>
-            <figure>
-              <img src="./part_1_images/gaussian_tobolsk.jpg" alt="Description C" loading="lazy">
-              <figcaption>Tobolsk<br>B shift: (-3, -3) R shift: (4, 1)</figcaption>
-            </figure>
-            <figure>
-              <img src="./part_2_images/gaussian_church.jpg" alt="church" loading="lazy">
-              <figcaption>Church<br>B shift: (-25, -4) R shift: (33, -8)</figcaption>
-            </figure>
-            <figure>
-              <img src="./part_2_images/gaussian_emir.jpg" alt="emir" loading="lazy">
-              <figcaption>Emir<br>B shift: (-49, -24) R shift: (57, 17)</figcaption>
-            </figure>
-            <figure>
-              <img src="./part_2_images/gaussian_harvesters.jpg" alt="harvesters" loading="lazy">
-              <figcaption>Harvesters<br>B shift: (-59, -17) R shift: (65, -3)</figcaption>
-            </figure>
-            <figure>
-              <img src="./part_2_images/gaussian_icon.jpg" alt="icon" loading="lazy">
-              <figcaption>Icon<br>B shift: (-41, -17) R shift: (48, 5)</figcaption>
-            </figure>
-            <figure>
-              <img src="./part_2_images/gaussian_italil.jpg" alt="italil" loading="lazy">
-              <figcaption>Italil<br>B shift: (-38, -21) R shift: (39, 15)</figcaption>
-            </figure>
-            <figure>
-              <img src="./part_2_images/gaussian_lastochikino.jpg" alt="lastochikino" loading="lazy">
-              <figcaption>Lastochikino<br>B shift: (3, 2) R shift: (78, -7)</figcaption>
-            </figure>
-            <figure>
-              <img src="./part_2_images/gaussian_lugano.jpg" alt="lugano" loading="lazy">
-              <figcaption>Lugano<br>B shift: (-41, 16) R shift: (52, -13)</figcaption>
-            </figure>
-            <figure>
-              <img src="./part_2_images/gaussian_melons.jpg" alt="melons" loading="lazy">
-              <figcaption>Melons<br>B shift: (-82, -11) R shift: (92, 3)</figcaption>
-            </figure>
-            <figure>
-              <img src="./part_2_images/gaussian_self_portrait.jpg" alt="self_portrait" loading="lazy">
-              <figcaption>Self Portrait<br>B shift: (-79, -29) R shift: (92, 7)</figcaption>
-            </figure>
-            <figure>
-              <img src="./part_2_images/gaussian_siren.jpg" alt="siren" loading="lazy">
-              <figcaption>Siren<br>B shift: (-49, 6) R shift: (47, -19)</figcaption>
-            </figure>
-            <figure>
-              <img src="./part_2_images/gaussian_three_generations.jpg" alt="three_generations" loading="lazy">
-              <figcaption>Three Generations<br>B shift: (-52, -14) R shift: (59, -3)</figcaption>
-            </figure>
-          </div>
-        </section>
-
-        <section>
-          <h2>Part 2: My Selected Images</h2>
-          <div class="gallery">
-            <figure>
-              <img src="./part_3_images/gaussian_floodgates.jpg" alt="Description A" loading="lazy">
-              <figcaption>Floodgates<br>B shift: (-3, 1) R shift: (6, -1)</figcaption>
-            </figure>
-            <figure>
-              <img src="./part_3_images/gaussian_milan_cathedral.jpg" alt="Description A" loading="lazy">
-              <figcaption>Milan Cathedral<br>B shift: (-6, -1) R shift: (7, 1)</figcaption>
-            </figure>
-            <figure>
-              <img src="./part_3_images/gaussian_sacks.jpg" alt="Description A" loading="lazy">
-              <figcaption>Sacks<br>B shift: (-5, -3) R shift: (7, -1)</figcaption>
-            </figure>
-          </div>
-        </section>
-      </main>
-
-      <footer>
+      <section class="gallery-text">
+        <h2>Project Overview</h2>
         <p>
-          Built with plain HTML & CSS. Hosted on GitHub Pages. 
-          <a href="https://cal-cs180.github.io/fa25/hw/proj3/partA.html">Assignment details</a>.
+          The goal of this project is to create image mosaics by registering, warping, resampling, and compositing
+          multiple photographs. This involves computing homographies to perform projective transformations and
+          blending images seamlessly. Throughout this project, I implement homography computation, image warping
+          with different interpolation methods, and image blending techniques to create panoramic mosaics.
         </p>
-      </footer>
-    </div>
+      </section>
 
-    <script>
-      const root = document.documentElement;
+      <!-- Part A.1: Shoot and Digitize Pictures -->
+      <section>
+        <h2>Part A.1: Shoot and Digitize Pictures</h2>
 
-      function getInitialTheme() {
-        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const saved = localStorage.theme;
-        return saved || (systemPrefersDark ? 'dark' : 'light');
-      }
+        <div class="gallery-text">
+          <h3>Image Set 1</h3>
+          <p>Here are some pictures that I shot inside an apartment.
+            These are examples of projective transformations, where the center of projection was fixed, but the camera
+            was rotated to be able to capture different views of the scene.</p>
+        </div>
+        <figure>
+          <img src="./outputs/image_set_1_overview.png" alt="Set 1 Image 1" loading="lazy">
+        </figure>
+        <div class="gallery-text">
+          <h3>Image Set 2</h3>
+          <p>Here are some pictures that I shot inside Main Stacks.
+        </div>
+        <figure>
+          <img src="./outputs/image_set_2_overview.png" alt="Set 1 Image 1" loading="lazy">
+        </figure>
+        <div class="gallery-text">
+          <h3>Image Set 3</h3>
+          <p>Here are some more photos that I shot inside Main Stacks.
+        </div>
+        <figure>
+          <img src="./outputs/image_set_3_overview.png" alt="Set 1 Image 1" loading="lazy">
+        </figure>
+        <!-- Part A.2: Recover Homographies -->
+        <section>
+          <h2>Part A.2: Recover Homographies</h2>
 
-      function applyTheme(theme) {
-        root.setAttribute('data-theme', theme);
-        localStorage.theme = theme;
-      }
+          <div class="gallery-text">
+            <h3>Overview</h3>
+            <p>
+              This portion of the project involved constructing 3×3 homography matrices to map coordinates from one
+              plane to another.
+              The transformation is written as <code>A&nbsp;x&nbsp;=&nbsp;b</code>, where <code>x</code> contains the
+              eight unknown
+              parameters of the homography (the ninth entry is fixed to 1). Specifically, <code>x[0:3]</code>
+              corresponds to the first row,
+              <code>x[3:6]</code> to the second row, and <code>x[6:8] + [1]</code> to the third row of the matrix.
+            </p>
 
-      function updateToggleIcons() {
-        const current = root.getAttribute('data-theme') || getInitialTheme();
-        document.querySelectorAll('.theme-toggle').forEach((btn) => {
-          btn.innerHTML = `<i data-lucide="${current === 'dark' ? 'sun' : 'moon'}"></i>`;
-        });
-        if (window.lucide && typeof window.lucide.createIcons === 'function') {
-          window.lucide.createIcons();
-        }
-      }
+            <h3>Implementation</h3>
+            <p>
+              To solve for <code>x</code>, a least-squares approach is used because relying on only four point
+              correspondences is unstable.
+              Additional correspondences are therefore incorporated to improve robustness.
+            </p>
+            <p>
+              For each correspondence between a point <code>im1_point = (x, y)</code> in the first image and
+              <code>im2_point = (x′, y′)</code> in the second image, two rows are added to <code>A</code> and two
+              entries to <code>b</code>:
+            </p>
+            <p style="margin: 0.75rem 0;">
+              <strong>Row 1 of A:</strong>
+              <code>[x, y, 1, 0, 0, 0, -x′·x, -x′·y]</code><br>
+              <strong>Row 2 of A:</strong>
+              <code>[0, 0, 0, x, y, 1, -y′·x, -y′·y]</code><br>
+              <strong>Corresponding entries in b:</strong>
+              <code>[x′, y′]</code>
+            </p>
+            <p>
+              Here, <code>im1_point</code> and <code>im2_point</code> represent matching (x, y) coordinates in
+              Image&nbsp;1 and Image&nbsp;2,
+              respectively. This process is repeated for all point pairs, accumulating two equations per correspondence,
+              and the resulting
+              overdetermined system <code>A&nbsp;x&nbsp;=&nbsp;b</code> is solved in the least-squares sense to obtain
+              the homography.
+            </p>
 
-      // Initialize
-      applyTheme(getInitialTheme());
-      updateToggleIcons();
+            <h3>Point Correspondences</h3>
+            <p>
+              The figures illustrate the correspondences between the two images.
+            </p>
+          </div>
+          <figure>
+            <img src="./outputs/correspondence_points_set3.png" loading="lazy">
+          </figure>
 
-      // Wire up events for all toggles
+          <h3>Computed Matrices</h3>
+
+          <p>
+            The following matrices show the results of the homography computation.
+            The <strong>A</strong> matrix represents the system coefficients,
+            <strong>b</strong> is the vector of corresponding image coordinates,
+            and <strong>H</strong> is the resulting 3×3 homography matrix.
+          </p>
+
+          <div style="margin: 1.5rem 0;">
+            <h4 style="margin-bottom: 0.5rem;">A Matrix</h4>
+            <pre style="
+              background-color: #1e1e1e;
+              color: #dcdcdc;
+              padding: 1rem;
+              border-radius: 8px;
+              overflow-x: auto;
+              font-size: 0.85rem;
+            ">
+              [[ 1.4900e+02 9.0000e+01 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -1.2814e+04 -7.7400e+03]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.4900e+02 9.0000e+01 1.0000e+00 -1.2963e+04 -7.8300e+03]
+              [ 1.4700e+02 1.3200e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -1.2936e+04 -1.1616e+04]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.4700e+02 1.3200e+02 1.0000e+00 -1.8963e+04 -1.7028e+04]
+              [ 1.4700e+02 1.7200e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -1.2789e+04 -1.4964e+04]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.4700e+02 1.7200e+02 1.0000e+00 -2.4990e+04 -2.9240e+04]
+              [ 1.4600e+02 2.1100e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -1.2848e+04 -1.8568e+04]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.4600e+02 2.1100e+02 1.0000e+00 -3.0368e+04 -4.3888e+04]
+              [ 8.0000e+01 9.6000e+01 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -8.8000e+02 -1.0560e+03]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 8.0000e+01 9.6000e+01 1.0000e+00 -7.1200e+03 -8.5440e+03]
+              [ 9.4000e+01 1.4200e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -2.7260e+03 -4.1180e+03]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 9.4000e+01 1.4200e+02 1.0000e+00 -1.3160e+04 -1.9880e+04]
+              [ 1.8000e+02 1.0600e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -2.1240e+04 -1.2508e+04]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.8000e+02 1.0600e+02 1.0000e+00 -1.8900e+04 -1.1130e+04]
+              [ 1.7900e+02 1.3500e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -2.1301e+04 -1.6065e+04]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.7900e+02 1.3500e+02 1.0000e+00 -2.3628e+04 -1.7820e+04]
+              [ 1.7900e+02 1.6300e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -2.1122e+04 -1.9234e+04]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.7900e+02 1.6300e+02 1.0000e+00 -2.8640e+04 -2.6080e+04]
+              [ 1.7800e+02 1.9100e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -2.1004e+04 -2.2538e+04]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.7800e+02 1.9100e+02 1.0000e+00 -3.3286e+04 -3.5717e+04]
+              [ 1.7900e+02 2.2000e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -2.1301e+04 -2.6180e+04]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.7900e+02 2.2000e+02 1.0000e+00 -3.8306e+04 -4.7080e+04]
+              [ 2.1200e+02 7.7000e+01 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -3.1376e+04 -1.1396e+04]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 2.1200e+02 7.7000e+01 1.0000e+00 -1.6748e+04 -6.0830e+03]
+              [ 1.5900e+02 6.2000e+01 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -1.5264e+04 -5.9520e+03]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.5900e+02 6.2000e+01 1.0000e+00 -9.5400e+03 -3.7200e+03]
+              [ 1.8000e+02 8.2000e+01 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -2.1240e+04 -9.6760e+03]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.8000e+02 8.2000e+01 1.0000e+00 -1.4760e+04 -6.7240e+03]
+              [ 1.7700e+02 2.6600e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -2.0886e+04 -3.1388e+04]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.7700e+02 2.6600e+02 1.0000e+00 -4.5843e+04 -6.8894e+04]
+              [ 1.2000e+02 2.7000e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -7.3200e+03 -1.6470e+04]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.2000e+02 2.7000e+02 1.0000e+00 -3.2640e+04 -7.3440e+04]
+              [ 2.0800e+02 2.2700e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -3.0368e+04 -3.3142e+04]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 2.0800e+02 2.2700e+02 1.0000e+00 -4.5552e+04 -4.9713e+04]
+              [ 1.2400e+02 7.0000e+01 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -7.3160e+03 -4.1300e+03]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.2400e+02 7.0000e+01 1.0000e+00 -7.9360e+03 -4.4800e+03]
+              [ 1.2200e+02 1.2200e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -7.3200e+03 -7.3200e+03]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.2200e+02 1.2200e+02 1.0000e+00 -1.4518e+04 -1.4518e+04]
+              [ 1.2100e+02 1.7200e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -7.3810e+03 -1.0492e+04]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.2100e+02 1.7200e+02 1.0000e+00 -2.0691e+04 -2.9412e+04]
+              [ 1.2100e+02 2.2000e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -7.3810e+03 -1.3420e+04]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.2100e+02 2.2000e+02 1.0000e+00 -2.6741e+04 -4.8620e+04]
+              [ 2.0200e+02 2.7100e+02 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -2.8482e+04 -3.8211e+04]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 2.0200e+02 2.7100e+02 1.0000e+00 -5.2722e+04 -7.0731e+04]
+              [ 1.9800e+02 5.3000e+01 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -2.6532e+04 -7.1020e+03]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.9800e+02 5.3000e+01 1.0000e+00 -1.1088e+04 -2.9680e+03]
+              [ 1.4200e+02 4.6000e+01 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -1.1360e+04 -3.6800e+03]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.4200e+02 4.6000e+01 1.0000e+00 -6.1060e+03 -1.9780e+03]
+              [ 1.8800e+02 3.5000e+01 1.0000e+00 0.0000e+00 0.0000e+00 0.0000e+00 -2.3312e+04 -4.3400e+03]
+              [ 0.0000e+00 0.0000e+00 0.0000e+00 1.8800e+02 3.5000e+01 1.0000e+00 -6.7680e+03 -1.2600e+03]]
+            </pre>
+          </div>
+
+          <div style="margin: 1.5rem 0;">
+            <h4 style="margin-bottom: 0.5rem;">b Matrix</h4>
+            <pre style="
+              background-color: #1e1e1e;
+              color: #dcdcdc;
+              padding: 1rem;
+              border-radius: 8px;
+              overflow-x: auto;
+              font-size: 0.85rem;
+            ">
+          [ 86.  87.  88. 129.  87. 170.  88. 208.  11.  89.  29. 140. 118. 105.
+          119. 132. 118. 160. 118. 187. 119. 214. 148.  79.  96.  60. 118.  82.
+          118. 259.  61. 272. 146. 219.  59.  64.  60. 119.  61. 171.  61. 221.
+          141. 261. 134.  56.  80.  43. 124.  36.]
+            </pre>
+          </div>
+
+          <div style="margin: 1.5rem 0;">
+            <h4 style="margin-bottom: 0.5rem;">H Matrix</h4>
+            <pre style="
+              background-color: #1e1e1e;
+              color: #00ffcc;
+              padding: 1rem;
+              border-radius: 8px;
+              overflow-x: auto;
+              font-size: 0.95rem;
+            ">
+          [[ 1.37670896e+00  3.17739065e-02 -1.00864074e+02]
+          [ 2.06032825e-01  1.23866833e+00 -3.51875841e+01]
+          [ 1.47286400e-03  5.77021348e-05  1.00000000e+00]]
+            </pre>
+          </div>
+
+        </section>
+
+        <!-- Part A.3: Warp the Images -->
+        <section>
+          <h2>Part A.3: Warp the Images</h2>
+
+          <div class="gallery-text">
+            <h3>Overview</h3>
+            <p>
+              Using the computed homographies, I warped images to align them with a reference frame. I implemented
+              inverse warping to avoid holes in the output. For each pixel in the output image, I compute its
+              corresponding location in the input image using \(H^{-1}\) and sample the color value using interpolation.
+            </p>
+
+            <h3>Implementation</h3>
+            <p>
+              I implemented two interpolation methods:
+            </p>
+            <ul>
+              <li>
+                <strong>Nearest Neighbor:</strong> Round the computed coordinates to the nearest integer pixel position.
+                This is fast but can produce blocky artifacts.
+              </li>
+              <li>
+                <strong>Bilinear Interpolation:</strong> Compute a weighted average of the four neighboring pixels
+                based on the fractional part of the coordinates. This produces smoother results but is computationally
+                more expensive.
+              </li>
+            </ul>
+
+            <h3>Bounding Box Computation</h3>
+            <p>
+              To determine the output image size, I transformed the four corners of the input image through the
+              homography and computed the bounding box of the warped corners. I also maintained an alpha channel
+              to track which pixels contain valid image data.
+            </p>
+
+            <h3>Rectification Examples</h3>
+            <p>
+              Before creating full mosaics, I tested the warping pipeline by rectifying rectangular objects in
+              photographs. By defining correspondences between a tilted rectangle and a canonical square, I can
+              "straighten" the object.
+            </p>
+          </div>
+          <h3>Rectification on Images from Part 1 and 2</h3>
+          <figure>
+            <img src="./outputs/set1/im1.jpeg" loading="lazy">
+            <figcaption>Rectification Example 1 - Original</figcaption>
+          </figure>
+          <figure>
+            <img src="./outputs/warped_nn_set3.png" loading="lazy">
+            <figcaption>Rectification Example 1 - Nearest Neighbor</figcaption>
+          </figure>
+          <figure>
+            <img src="./outputs/warped_bilinear_set3.png" loading="lazy">
+            <figcaption>Rectification Example 1 - Bilinear</figcaption>
+          </figure>
+
+          <h3>Rectification on a Parcel</h3>
+          <figure>
+            <img src="./outputs/rec3.jpeg" loading="lazy">
+            <figcaption>Rectification Example 1 - Original</figcaption>
+          </figure>
+          <figure>
+            <img src="./outputs/parcel_warped_nn.png" loading="lazy">
+            <figcaption>Rectification using NN</figcaption>
+          </figure>
+          <figure>
+            <img src="./outputs/parcel_warped_bilinear.png" loading="lazy">
+            <figcaption>Rectification using Bilinear</figcaption>
+          </figure>
+          <figure>
+            <img src="./outputs/parcel_warped_nn_rectified.png" loading="lazy">
+            <figcaption>Zoomed in NN Rectification</figcaption>
+          </figure>
+          <figure>
+            <img src="./outputs/parcel_warped_bilinear_rectified.png" loading="lazy">
+            <figcaption>Zoomed in Bilinear Rectification</figcaption>
+          </figure>
+
+          <h3>Rectification on a Squidward Photo</h3>
+
+          <figure>
+            <img src="./outputs/rec4.jpeg" loading="lazy">
+            <figcaption>Original Image</figcaption>
+          </figure>
+          <figure>
+            <img src="./outputs/squidward_warped_nn.png" loading="lazy">
+            <figcaption>Rectification using NN</figcaption>
+          </figure>
+          <figure>
+            <img src="./outputs/squidward_warped_bilinear.png" loading="lazy">
+            <figcaption>Rectification using Bilinear</figcaption>
+          </figure>
+          <figure>
+            <img src="./outputs/squidward_warped_nn_rectified.png" loading="lazy">
+            <figcaption>Zoomed in NN Rectification</figcaption>
+          </figure>
+          <figure>
+            <img src="./outputs/squidward_warped_bilinear_rectified.png" loading="lazy">
+            <figcaption>Zoomed in Bilinear Rectification</figcaption>
+          </figure>
+
+          <div class="gallery-text">
+            <h3>Interpolation Comparison</h3>
+            <p>
+              Both methods had their own trade-offs. The nearest-neighbor approach was slightly faster and produced
+              sharper results, though it tended to be slightly less smooth than bilinear interpolation. In contrast,
+              bilinear interpolation yielded a softer, more blended appearance, but the nearest-neighbor results were
+              still reasonably smooth overall.
+            </p>
+          </div>
+        </section>
+
+        <!-- Part A.4: Blend Images into Mosaics -->
+        <section>
+          <h2>Part A.4: Blend Images into Mosaics</h2>
+
+          <div class="gallery-text">
+            <h3>Overview</h3>
+            <p>
+              This part focused on blending multiple images into a single mosaic. I began by computing a homography
+              using
+              corresponding points between two images, allowing me to warp one image into the coordinate frame of the
+              other.
+              The warped image and the reference image were then placed on a larger canvas, with offsets adjusted to
+              align them
+              properly.
+            </p>
+
+            <h3>Blending Process</h3>
+            <p>
+              Initially, combining images by direct pixel replacement caused visible seams at the boundaries. To fix
+              this, I
+              implemented distance-based alpha blending. Each image had an alpha mask where pixels near the center had
+              higher
+              weights and pixels near the edges had lower weights, computed using a distance transform. In overlapping
+              regions,
+              pixel values were blended using a weighted average of the contributing images based on these alpha values.
+            </p>
+
+            <p>
+              The final blending equation was:
+              \[
+              I_{\text{final}}(x,y) = \frac{\sum_i \alpha_i(x,y) \cdot I_i(x,y)}{\sum_i \alpha_i(x,y)}
+              \]
+              where \(\alpha_i\) represents the distance-based weight for each image. This produced smooth, seamless
+              transitions
+              between overlapping regions.
+            </p>
+          </div>
+
+          <h3>Mosaic 1</h3>
+          <h4>Source Images</h4>
+          <div class="gallery">
+            <figure>
+              <img src="./outputs/set1/im1.jpeg" alt="Mosaic 1 Source 1" loading="lazy">
+              <figcaption>Mosaic 1 - Source Image 1</figcaption>
+            </figure>
+            <figure>
+              <img src="./outputs/set1/im2.jpeg" alt="Mosaic 1 Source 2" loading="lazy">
+              <figcaption>Mosaic 1 - Source Image 2</figcaption>
+            </figure>
+          </div>
+
+          <h4>Warped Image</h4>
+          <figure>
+            <img src="./outputs/warped_nn_set3.png" loading="lazy">
+            <figcaption>Warped Image</figcaption>
+          </figure>
+
+          <h4>Final Mosaic Result</h4>
+          <figure>
+            <img src="./outputs/mosaic_1_bilinear.png" loading="lazy">
+            <figcaption>Mosaic 1 - Bilinear Final Result</figcaption>
+          </figure>
+
+          <figure>
+            <img src="./outputs/mosaic_1_nn.png" loading="lazy">
+            <figcaption>Mosaic 1 - NN Final Result</figcaption>
+          </figure>
+
+          <figure>
+            <img src="./outputs/mosaic_1_no_blend.png" loading="lazy">
+            <figcaption>Mosaic 1 - No Blend Final Result</figcaption>
+          </figure>
+
+
+          <h3>Mosaic 2</h3>
+
+          <h4>Source Images</h4>
+          <div class="gallery">
+            <figure>
+              <img src="./outputs/set2/im1.jpeg" loading="lazy">
+              <figcaption>Mosaic 2 - Source Image 1</figcaption>
+            </figure>
+            <figure>
+              <img src="./outputs/set2/im2.jpeg" loading="lazy">
+              <figcaption>Mosaic 2 - Source Image 2</figcaption>
+            </figure>
+          </div>
+
+          <h4>Warped Image</h4>
+          <figure>
+            <img src="./outputs/warped_set2.png" loading="lazy">
+            <figcaption>Warped Image</figcaption>
+          </figure>
+
+          <h4>Final Mosaic Result</h4>
+          <figure>
+            <img src="./outputs/mosaic_2_bilinear.png" loading="lazy">
+            <figcaption>Mosaic 2 - Bilinear Final Result</figcaption>
+          </figure>
+
+          <figure>
+            <img src="./outputs/mosaic_2_nn.png" loading="lazy">
+            <figcaption>Mosaic 2 - NN Final Result</figcaption>
+          </figure>
+
+          <figure>
+            <img src="./outputs/mosaic_2_no_blend.png" loading="lazy">
+            <figcaption>Mosaic 2 - No Blend Final Result</figcaption>
+          </figure>
+
+
+          <h3>Mosaic 3: </h3>
+
+
+          <h4>Source Images</h4>
+          <div class="gallery">
+            <figure>
+              <img src="./outputs/set3/im1.jpeg" oading="lazy">
+              <figcaption>Mosaic 3 - Source Image 1</figcaption>
+            </figure>
+            <figure>
+              <img src="./outputs/set3/im2.jpeg" loading="lazy">
+              <figcaption>Mosaic 3 - Source Image 2</figcaption>
+            </figure>
+          </div>
+
+          <h4>Warped Image</h4>
+          <figure>
+            <img src="./outputs/warped_set1.png" loading="lazy">
+            <figcaption>Warped Image</figcaption>
+          </figure>
+
+          <h4>Final Mosaic Result</h4>
+          <figure>
+            <img src="./outputs/mosaic_3_bilinear.png" loading="lazy">
+            <figcaption>Mosaic 3 - Bilinear Final Result</figcaption>
+          </figure>
+
+          <figure>
+            <img src="./outputs/mosaic_3_nn.png" loading="lazy">
+            <figcaption>Mosaic 3 - NN Final Result</figcaption>
+          </figure>
+
+          <figure>
+            <img src="./outputs/mosaic_3_no_blend.png" loading="lazy">
+            <figcaption>Mosaic 3 - No Blend Final Result</figcaption>
+          </figure>
+        </section>
+    </main>
+
+    <footer>
+      <p>
+        Built with plain HTML & CSS. Hosted on GitHub Pages.
+        <a href="https://cal-cs180.github.io/fa25/hw/proj3/partA.html">Assignment details</a>.
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+
+    function getInitialTheme() {
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const saved = localStorage.theme;
+      return saved || (systemPrefersDark ? 'dark' : 'light');
+    }
+
+    function applyTheme(theme) {
+      root.setAttribute('data-theme', theme);
+      localStorage.theme = theme;
+    }
+
+    function updateToggleIcons() {
+      const current = root.getAttribute('data-theme') || getInitialTheme();
       document.querySelectorAll('.theme-toggle').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const current = root.getAttribute('data-theme');
-          const next = current === 'dark' ? 'light' : 'dark';
-          applyTheme(next);
-          updateToggleIcons();
-        });
+        btn.innerHTML = `<i data-lucide="${current === 'dark' ? 'sun' : 'moon'}"></i>`;
       });
-    </script>
-  </body>
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+    }
+
+    // Initialize
+    applyTheme(getInitialTheme());
+    updateToggleIcons();
+
+    // Wire up events for all toggles
+    document.querySelectorAll('.theme-toggle').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const current = root.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        updateToggleIcons();
+      });
+    });
+  </script>
+</body>
+
 </html>
