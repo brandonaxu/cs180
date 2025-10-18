@@ -494,11 +494,13 @@
 
         <section>
           <h2>Part B.1: Harris Corner Detection</h2>
-          <p>I implemented corner detection by running a single-scale Harris interest point detector to get a dense set
-            of candidate corners, then applied Adaptive Non-Maximal Suppression (ANMS) that computes a suppression
-            radius relative to stronger neighbors and keeps the best-spaced top-N keypoints. As a result, I obtained 500
-            points that are relatively spread out from each other compared to the many points created from Harris
-            Detection</p>
+          <p>Because the implementation for Harris Corners was provided most of the work in this part focused on ANMS.
+            Since raw Harris corners clump in textured regions, I apply ANMS with N=500 and c=0.9: for each
+            candidate I compute a suppression radius to the nearest corner that’s at least 1/c ≈ 1.11× stronger, and I
+            keep the 500 largest radii so the final keypoints are strong and spatially well-distributed. The c=0.9
+            setting is a mild strictness that still lets slightly weaker neighbors survive if they’re far enough away,
+            and N=500 balances coverage with descriptor/matching cost. In the end, I receive an image that is well
+            spread out with its points.</p>
           <div class="gallery-text">
             <h3>Harris Corners and ANMS on Mosaic 1, Image 1</h3>
             <figure>
@@ -513,9 +515,16 @@
 
         <section>
           <h2>Part B.2: Feature Descriptor Extraction</h2>
-          <p>For each selected keypoint, I extract a 40×40 grayscale window (after Gaussian blur) and resample it down
-            to an 8×8 vector that I bias/gain normalize to zero mean and unit variance. Points that conflicted with
-            borders were left out from extraction.</p>
+          <p>For each ANMS keypoint (r, c), I convert to grayscale and smooth with a Gaussian, which reduces
+            high-frequency noise and makes
+            the descriptor more robust to small misalignments. I then extract a 40×40 patch with patch_radius=20
+            (skipping points too close to the border), downsample it to 8×8 to get a
+            compact 64-D vector, and standardize each patch by subtracting its mean and dividing by its std. The 40 to 8
+            downsampling captures coarse structure (edges/corners/blobs) while discarding
+            fine detail that doesn’t transfer reliably across views, and the zero-mean/unit-variance normalization gives
+            some invariance to affine intensity changes. The
+            ksize=30, sigma=5 Gaussian is wide enough to attenuate pixel-level noise but not so wide that it washes out
+            the corner structure that Harris selected.</p>
           <div class="gallery-text">
             <h3>Feature Descriptors on Mosaic 1, Image 1</h3>
             <figure>
@@ -526,9 +535,16 @@
 
         <section>
           <h2>Part B.3: Feature Matching</h2>
-          <p>I match features by computing pairwise distances between descriptors, taking each point’s best and
-            second-best matches, and applying Lowe’s ratio test to discard ambiguous pairs. The surviving
-            correspondences are the “good” matches I visualize between image pairs.</p>
+          <p>I match features by computing the full pairwise squared Euclidean distance matrix, and, for each
+            descriptor, I find the two nearest neighbors best and second. I apply Lowe’s ratio with a ratio thereshold
+            of 0.7 and a tiny error 1e-12 in the denominator for numerical safety; this rejects ambiguous matches in
+            repetitive textures where the top two candidates are almost equally close. I used 0.7 as a threshold because
+            it is a conservative choice that
+            prunes many false positives while typically keeping enough correspondences for robust RANSAC. I then return
+            only the indices
+            that pass the
+            ratio test and visualize them so I can sanity-check coverage and spatial distribution before estimating
+            geometry.</p>
           <div class="gallery-text">
             <h3>Feature Descriptors on Mosaic 1, Image 1</h3>
             <figure>
@@ -539,10 +555,27 @@
 
         <section>
           <h2>Part B.4: RANSAC for Robust Homography</h2>
-          <p>Starting from the tentative matches, I run 4-point RANSAC: repeatedly fit a homography from four random
-            pairs, count inliers via reprojection error, keep the model with the most inliers, and finally refit on all
-            inliers to get a robust H. I then feed that H into my Part-A warping/mosaicing code to produce automatic
-            panoramas and compare them with the manual results.</p>
+          <p>Starting from the tentative matches, I estimate a homography with RANSAC using iterations=10000 and an
+            inlier threshold=3.0 pixels: I repeatedly sample 4 correspondences, compute H with my computeH DLT
+            least-squares solver, measure reprojection error on all matches, and keep the model with the largest inlier
+            set. The 3-pixel cutoff reflects a balance between measurement noise (blurry or downsampled keypoints,
+            descriptor quantization) and real geometric deviations; smaller thresholds risk rejecting good points, while
+            larger ones admit more outliers. After RANSAC, I refit H on just the inliers to reduce bias from the random
+            minimal sample and to get the best possible estimate for warping. In auto_stitching, I used a
+            matching_threshold=0.7, ransac_threshold=3.0, and ransac_iterations=10000—so I can trade speed
+            for robustness depending on the image pair. Finally, I mosaic the images using my Part-A compositor
+            (mosaic_NN) fed by the RANSAC inliers. This setup yields an end-to-end automatic stitcher that handles
+            outliers gracefully and produces stable panoramas without manual correspondences.</p>
+
+          <p> When comparing the automatic stitching results to the manual correspondences from Part A, I observed that
+            the RANSAC-based mosaics were
+            generally quite good, though due to the quality/size of my images it is hard to tell if there is a
+            meaningful difference.
+            RANSAC can only work with the features it detects, which may not cover all the ideal
+            areas for alignment, which may result in not perfect alignment. However, the automatic approach is much more
+            scalable and requires no user input,
+            making it suitable for a wide range of images. Overall, the RANSAC mosaics were satisfactory and
+            demonstrated the effectiveness of robust estimation in practical scenarios.</p>
           <div class="gallery-text">
             <h3>RANSAC on Mosaic 1</h3>
             <figure>
