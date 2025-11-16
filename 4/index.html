@@ -1,0 +1,467 @@
+<link rel="stylesheet" href="../style.css">
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Project 4 — CS180 / 280A</title>
+    <meta name="description" content="Project 4 write-up for CS180/280A - Neural Radiance Field." />
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)'], ['$', '$']],
+                displayMath: [['\\[', '\\]'], ['$$', '$$']]
+            },
+            options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+
+<body>
+    <div class="wrap">
+        <header>
+            <div class="brand">Brandon Xu</div>
+            <div class="subtitle">CS180 / 280A • Fall 2025</div>
+            <nav>
+                <a href="../index.html">← Back to Portfolio</a>
+                <button class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+                    <i data-lucide="sun" class="icon-sun"></i>
+                    <i data-lucide="moon" class="icon-moon"></i>
+                </button>
+            </nav>
+        </header>
+
+        <main>
+            <h1>Project 4 — Neural Radiance Field</h1>
+
+            <section class="gallery-text">
+                <h2>Part 0 — Calibrating Your Camera and Capturing a 3D Scan</h2>
+
+                <h3>Part 0.3 — Estimating Camera Pose</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    Below are two screenshots of my camera frustums visualization in Viser.
+                </p>
+
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_0_images/visor_mushroom_1.png" alt="Viser visualization 1" loading="lazy">
+                        <figcaption>Camera frustums visualization 1</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_0_images/visor_mushroom_2.png" alt="Viser visualization 2" loading="lazy">
+                        <figcaption>Camera frustums visualization 2</figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section class="gallery-text">
+                <h2>Part 1 — Fit a Neural Field to a 2D Image</h2>
+
+                <h3>Model Architecture Report</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    For this part I created a Multilayer Perceptron (MLP) network with Sinusoidal Positional Encoding
+                    (PE) that takes in the 2-dim pixel coordinates and outputs the 3-dim pixel colors. Below is an image
+                    of the MLP and table detailing the architecture consistent with my implementation.
+                </p>
+                <figure>
+                    <img src="./part_1_images/simple_mlp.jpg" alt="Simple MLP architecture" loading="lazy">
+                    <figcaption>Simple MLP architecture</figcaption>
+                </figure>
+                <table style="margin-bottom: 1.5rem; border-collapse: collapse; width: 100%; max-width: 600px;">
+                    <tr style="background-color: var(--bg-secondary);">
+                        <th style="padding: 0.75rem; text-align: left; border: 1px solid var(--border);">Parameter</th>
+                        <th style="padding: 0.75rem; text-align: left; border: 1px solid var(--border);">Value</th>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);"><strong>Layers</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);">
+                            4 fully-connected layers (3 hidden + 1 output) with hidden width 128:
+                            Linear(42→128) → ReLU → Linear(128→128) → ReLU → Linear(128→128) → ReLU →
+                            Linear(128→3) → Sigmoid.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);"><strong>Width</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);">128</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);"><strong>Learning Rate</strong>
+                        </td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);">1e-2 (Adam)</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);"><strong>Positional
+                                Encoding</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);">
+                            L = 10 → input dimension = 2 + 4L = 42 (normalized 2D coordinates plus sin/cos terms for
+                            both).
+                        </td>
+                    </tr>
+                </table>
+
+                <h3>Training Progression (Own Image)</h3>
+                <p style="margin-bottom: 0.5rem;"><strong>Original Image</strong></p>
+                <figure>
+                    <img src="./part_1_images/part_1_mushroom.png" alt="Original mushroom image" loading="lazy">
+                    <figcaption>Mushroom image</figcaption>
+                </figure>
+                <p style="margin-bottom: 0.5rem;"><strong>Training PSNR Curve on Mushroom</strong></p>
+                <figure>
+                    <img src="./part_1_images/psnr_train_1.png" alt="Training PSNR Curve" loading="lazy">
+                    <figcaption>Training PSNR Curve on Mushroom</figcaption>
+                </figure>
+                <p style="margin-bottom: 0.5rem;"><strong>Hyperparameter Tuning</strong></p>
+                <figure>
+                    <img src="./part_1_images/part_1_2x2_mushroom.png" alt="Hyperparameter Tuning" loading="lazy">
+                </figure>
+
+                <h3>Training Progression (Provided Test Image)</h3>
+                <p style="margin-bottom: 0.5rem;"><strong>Original Image</strong></p>
+                <figure>
+                    <img src="./part_1_images/part_1_wolf.png" alt="Original fox image" loading="lazy">
+                    <figcaption>Original fox image</figcaption>
+                </figure>
+            </section>
+
+            <section class="gallery-text">
+                <h2>Part 2 — Fit a Neural Radiance Field from Multi-view Images</h2>
+
+                <h3>Part 2.1 — Create Rays from Cameras</h3>
+                <p style="margin-bottom: 1rem;"><strong>Camera to World Coordinate Conversion</strong></p>
+                <p style="margin-bottom: 1.25rem;">
+                    I implemented the <code>transform_points</code> function to convert points from camera coordinates
+                    to world
+                    coordinates. The function supports batched camera poses and points: it extracts the rotation
+                    matrix <code>R</code> and translation vector <code>t</code> from the <code>c2w</code> matrix and
+                    computes
+                    <code>x_w = R x_c + t</code> to obtain the 3D world-space coordinates.
+                </p>
+
+                <p style="margin-bottom: 1rem;"><strong>Pixel to Camera Coordinate Conversion</strong></p>
+                <p style="margin-bottom: 1.25rem;">
+                    The <code>pixel_to_camera</code> function converts 2D pixel coordinates (u, v) to 3D camera-space
+                    coordinates using the intrinsic matrix K. It extracts the focal lengths (fx, fy) and principal point
+                    (cx, cy) from K, then applies the pinhole camera inverse projection formula:
+                    <code>x = (u - cx) / fx * s</code> and <code>y = (v - cy) / fy * s</code>, where <code>s</code> is
+                    the depth
+                    (set to 1.0 for direction rays).
+                </p>
+
+                <p style="margin-bottom: 1rem;"><strong>Pixel to Ray</strong></p>
+                <p style="margin-bottom: 1.25rem;">
+                    The <code>pixel_to_ray</code> function combines the above transformations to generate rays in world
+                    space. Ray origins are extracted directly from the translation component of the <code>c2w</code>
+                    matrix
+                    (camera centers). Ray directions are computed by first converting pixels to camera coordinates,
+                    transforming them to world space via <code>transform_points</code>, computing the vector from ray
+                    origin
+                    to the transformed point, and normalizing to unit length.
+                </p>
+
+                <h3>Part 2.2 — Sampling</h3>
+                <p style="margin-bottom: 1rem;"><strong>Sampling Rays from Images</strong></p>
+                <p style="margin-bottom: 1.25rem;">
+                    I created the <code>RaysData</code> class to precompute and store all possible rays from the
+                    training images. During initialization, it generates a grid of pixel coordinates (offset by 0.5 for
+                    pixel centers) for each image, builds a pinhole camera matrix from the focal length, and converts
+                    all
+                    pixels to rays using <code>pixel_to_ray</code>. It stores the ray origins, directions, and
+                    corresponding
+                    RGB values as tensors on the training device. The <code>sample_rays</code> method then randomly
+                    samples
+                    <code>N</code> rays by generating random indices into this precomputed set.
+                </p>
+
+                <p style="margin-bottom: 1rem;"><strong>Sampling Points along Rays</strong></p>
+                <p style="margin-bottom: 1.25rem;">
+                    The <code>sample_along_rays</code> function implements stratified sampling to generate 3D points
+                    along each ray between the near and far bounds. It linearly spaces <code>n_samples = 64</code> depth
+                    values
+                    between <code>near = 2.0</code> and <code>far = 6.0</code>, and when <code>perturb=True</code> it
+                    jitters each
+                    sample within its interval. Finally, it computes the 3D positions using the ray equation
+                    <code>p = o + t · d</code>.
+                </p>
+
+                <h3>Part 2.3 — Putting the Dataloading All Together</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    The <code>RaysData</code> class described in Part 2.2 serves as the dataloader for the NeRF training
+                    pipeline. It handles converting pixel coordinates to rays and returning ray origins, ray directions,
+                    and pixel colors. To verify the correctness of the ray generation and sampling implementation, I
+                    visualized the cameras, rays, and samples in 3D using the provided Viser code.
+                </p>
+
+                <figure>
+                    <img src="./part_2_images/visor_rays_lego.png" alt="Rays visualization" loading="lazy">
+                    <figcaption>Rays and samples visualization in Viser</figcaption>
+                </figure>
+
+                <h3>Part 2.4 — Neural Radiance Field</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    I implemented the NeRF MLP architecture, which takes 3D world coordinates and viewing directions as
+                    input and outputs density and RGB color values.
+                </p>
+                <figure>
+                    <img src="./part_2_images/network_architecture.png" alt="Network architecture" loading="lazy">
+                    <figcaption>Neural Radiance Field Architecture</figcaption>
+                </figure>
+                <p>
+                    My dataloader uniformly samples rays from every training image at random.
+                    The NeRF model itself is a deeper MLP compared to the network used in Part 1,
+                    and it receives both the 3D world-space coordinates of each sampled point
+                    and the corresponding viewing direction as inputs.
+                </p>
+
+                <p><strong>Positional Encoding:</strong>
+                    I apply positional encoding to both inputs to enable the network to model high-frequency details.
+                    For spatial coordinates, I use <code>L = 10</code>, and for the viewing direction I use
+                    <code>L = 4</code>.
+                </p>
+
+                <p><strong>Density &amp; Color Prediction:</strong>
+                    The network outputs both the volume density and the RGB color at each sampled location.
+                    Density is produced with a ReLU activation, while colors are constrained to <code>[0,1]</code>
+                    using a Sigmoid activation.
+                </p>
+
+                <p><strong>Skip Connections:</strong>
+                    To help preserve low-level information from the original encoded coordinates,
+                    a skip connection is used midway through the network by concatenating the input encoding
+                    back into the feature stream.
+                </p>
+
+
+                <h3>Part 2.5 — Volume Rendering</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    I implemented volume rendering to convert the density and color predictions along each ray into a
+                    final pixel color. The key idea is to accumulate color contributions from points along the ray,
+                    weighted by how likely the ray is to terminate at each point. Points closer to the camera contribute
+                    more if they have high density, while points further away contribute less if earlier points have
+                    already absorbed the light. This is computed by calculating transmittance (how much light reaches
+                    each point) and alpha values (probability of the ray stopping at each point), then summing the
+                    weighted color contributions. In the end I achieved a final training PSNR of 24.16 and a final
+                    validation PSNR of 24.53
+                </p>
+                <p style="margin-bottom: 1.25rem;">
+                    The <code>volrend</code> function implements this efficiently using cumulative products to compute
+                    transmittance in a vectorized manner. During training, I render batches of rays and optimize using
+                    MSE loss between predicted and ground truth colors. The <code>render_image</code> function renders
+                    complete validation images by processing all pixels in chunks.
+                </p>
+
+                <p style="margin-bottom: 0.75rem;"><strong>Training hyperparameters for the Lego dataset:</strong></p>
+                <table style="margin-bottom: 1.5rem; border-collapse: collapse; width: 100%; max-width: 600px;">
+                    <tr style="background-color: var(--bg-secondary);">
+                        <th style="padding: 0.75rem; text-align: left; border: 1px solid var(--border);">Parameter</th>
+                        <th style="padding: 0.75rem; text-align: left; border: 1px solid var(--border);">Value</th>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);"><strong>Iterations</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);">2000</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);"><strong>Batch Size</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);">10000 rays</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);"><strong>Samples per Ray</strong>
+                        </td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);">64</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);"><strong>Near/Far Bounds</strong>
+                        </td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);">2.0 / 6.0</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);"><strong>Learning Rate</strong>
+                        </td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);">5e-4 (Adam)</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);"><strong>Network Width</strong>
+                        </td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);">256</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);"><strong>Position Encoding
+                                (Lx)</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);">10</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);"><strong>Direction Encoding
+                                (Ld)</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);">4</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);"><strong>Stratified
+                                Sampling</strong></td>
+                        <td style="padding: 0.75rem; border: 1px solid var(--border);">Enabled with perturbation</td>
+                    </tr>
+                </table>
+
+                <p style="margin-bottom: 0.5rem;">
+                    Below are images showing validation renders at various training iterations, demonstrating
+                    progressive improvement in reconstruction quality:
+                </p>
+
+                <figure>
+                    <img src="./part_2_images/lego_iterative_1.png" alt="Lego iteration 1" loading="lazy">
+                    <figcaption>Iteration 1</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/lego_iterative_2.png" alt="Lego iteration 2" loading="lazy">
+                    <figcaption>Iteration 400</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/lego_iterative_3.png" alt="Lego iteration 3" loading="lazy">
+                    <figcaption>Iteration 800</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/lego_iterative_4.png" alt="Lego iteration 4" loading="lazy">
+                    <figcaption>Iteration 1200</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/lego_iterative_5.png" alt="Lego iteration 5" loading="lazy">
+                    <figcaption>Iteration 1600</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/lego_iterative_6.png" alt="Lego iteration 6" loading="lazy">
+                    <figcaption>Iteration 2000</figcaption>
+                </figure>
+
+                <p style="margin-bottom: 0.5rem;"><strong>PSNR Curves</strong></p>
+                <figure>
+                    <img src="./part_2_images/psnr_lego.png" alt="PSNR curve for lego" loading="lazy">
+                    <figcaption>PSNR progression over training iterations</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/validation_psnr_part_2.png" alt="Validation PSNR" loading="lazy">
+                    <figcaption>Validation PSNR curve</figcaption>
+                </figure>
+
+                <p style="margin-bottom: 0.5rem;">
+                    Using the trained model, I rendered novel views along a spherical camera path around the Lego
+                    bulldozer using the provided test camera poses: Please reload the page if the gif is stuck.
+                </p>
+
+                <figure>
+                    <img id="gif" src="./part_2_images/lego_spherical (1).gif" alt="Lego spherical render"
+                        loading="lazy">
+                    <figcaption>Novel views - Lego bulldozer (spherical path)</figcaption>
+                </figure>
+
+                <h3>Part 2.6 — Training NeRF on Custom Dataset</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    I trained NeRF on my own captured mushroom dataset stored as <code>my_data.npz</code>. In code I
+                    reuse
+                    the same NeRF architecture and optimizer as for the Lego scene, but I adjust the near and far bounds
+                    to <code>near = 0.04</code> and <code>far = 0.5</code> to match my scene's depth range (the object
+                    is much
+                    closer to the camera). I also train for <code>4000</code> iterations with
+                    <code>batch_size = 10000</code>, <code>n_samples = 64</code>, and <code>lr = 5e-4</code> to ensure
+                    convergence on
+                    this smaller, custom dataset. In the end I achieved a final training PSNR of 23.27 and a final
+                    loss of 0.0403.
+                </p>
+
+                <p style="margin-bottom: 1.25rem;">One thing I noticed when doing this step was that the calibration of
+                    the data and
+                    the data mattered a ton, so it took me a while to get a training/validation/test set that had well
+                    defined images. The final gif on the website was saved from my best npz dataset but it was lost, so
+                    the images in the notebook and iterative images on the website are taken from a worser dataset.
+                </p>
+                <figure>
+                    <img src="./part_2_images/mushroom_1.png" alt="Mushroom iteration 1" loading="lazy">
+                </figure>
+                <figure>
+                    <img src="./part_2_images/mushroom_2.png" alt="Mushroom iteration 2" loading="lazy">
+                </figure>
+                <figure>
+                    <img src="./part_2_images/mushroom_3.png" alt="Mushroom iteration 3" loading="lazy">
+                </figure>
+                <figure>
+                    <img src="./part_2_images/mushroom_4.png" alt="Mushroom iteration 4" loading="lazy">
+                </figure>
+                <figure>
+                    <img src="./part_2_images/mushroom_5.png" alt="Mushroom iteration 5" loading="lazy">
+                </figure>
+                <figure>
+                    <img src="./part_2_images/mushroom_6.png" alt="Mushroom iteration 6" loading="lazy">
+                </figure>
+                <p style="margin-bottom: 0.5rem;"><strong>PSNR Curves</strong></p>
+                <figure>
+                    <img src="./part_2_images/train_loss_mushroom.png" loading="lazy" alt="Training loss mushroom">
+                    <figcaption>Training Loss over training iterations</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/train_psnr_mushroom.png" loading="lazy" alt="Training PSNR mushroom">
+                    <figcaption>Training PSNR curve</figcaption>
+                </figure>
+                <p style="margin-bottom: 0.5rem;">
+                    Below is a video showing novel views of the trained NeRF model on my custom dataset: Please reload
+                    the page if the gif is stuck.
+                </p>
+
+                <div class="gallery" style="margin-bottom: 1.5rem;">
+                    <figure>
+                        <img id="gif" src="./part_2_images/mushroom_novel.gif" alt="Custom dataset novel views"
+                            loading="lazy">
+                        <figcaption>Novel views - Custom dataset (mushroom)</figcaption>
+                    </figure>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>
+                Built with plain HTML & CSS. Hosted on GitHub Pages.
+                <a href="https://cal-cs180.github.io/fa25/hw/proj4/index.html">Assignment details</a>.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const root = document.documentElement;
+
+        function getInitialTheme() {
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const saved = localStorage.theme;
+            return saved || (systemPrefersDark ? 'dark' : 'light');
+        }
+
+        function applyTheme(theme) {
+            root.setAttribute('data-theme', theme);
+            localStorage.theme = theme;
+        }
+
+        function updateToggleIcons() {
+            const current = root.getAttribute('data-theme') || getInitialTheme();
+            document.querySelectorAll('.theme-toggle').forEach((btn) => {
+                btn.innerHTML = `<i data-lucide="${current === 'dark' ? 'sun' : 'moon'}"></i>`;
+            });
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons();
+            }
+        }
+
+        // Initialize
+        applyTheme(getInitialTheme());
+        updateToggleIcons();
+
+        // Wire up events for all toggles
+        document.querySelectorAll('.theme-toggle').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const current = root.getAttribute('data-theme');
+                const next = current === 'dark' ? 'light' : 'dark';
+                applyTheme(next);
+                updateToggleIcons();
+            });
+        });
+    </script>
+</body>
+
+</html>
