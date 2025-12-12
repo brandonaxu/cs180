@@ -1,0 +1,879 @@
+<link rel="stylesheet" href="../style.css">
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Project 4 — CS180 / 280A</title>
+    <meta name="description" content="Project 4 write-up for CS180/280A - Neural Radiance Field." />
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)'], ['$', '$']],
+                displayMath: [['\\[', '\\]'], ['$$', '$$']]
+            },
+            options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+
+<body>
+    <div class="wrap">
+        <header>
+            <div class="brand">Brandon Xu</div>
+            <div class="subtitle">CS180 / 280A • Fall 2025</div>
+            <nav>
+                <a href="../index.html">← Back to Portfolio</a>
+                <button class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+                    <i data-lucide="sun" class="icon-sun"></i>
+                    <i data-lucide="moon" class="icon-moon"></i>
+                </button>
+            </nav>
+        </header>
+
+        <main>
+            <h1>Project 4 — Fun With Diffusion Models!</h1>
+            <h2>Part A — The Power of Diffusion Models!</h2>
+            <section class="gallery-text">
+                <h2>Part 0 — Settings</h2>
+                <p style="margin-bottom: 1.25rem;">
+                    Here I set a random seed of 100 and played around with different prompts of using the DeepFloyd IF
+                    diffusion model, comparing 20 vs 120 steps.
+                </p>
+
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/0_stage1_image1.png" loading="lazy">
+                        <figcaption>a high quality macro photo of a blooming flower, stage 1, 20 steps</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/0_stage1_image2.png" loading="lazy">
+                        <figcaption>a spaceship docking at a massive orbital station, stage 1, 20 steps</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/0_stage1_image3.png" loading="lazy">
+                        <figcaption>a pencil drawing of a vintage typewriter, stage 1, 20 steps</figcaption>
+                    </figure>
+                </div>
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/0_stage2_image1.png" loading="lazy">
+                        <figcaption>a high quality macro photo of a blooming flower, stage 2, 20 steps</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/0_stage2_image2.png" loading="lazy">
+                        <figcaption>a spaceship docking at a massive orbital station, stage 2, 20 steps</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/0_stage2_image3.png" loading="lazy">
+                        <figcaption>a pencil drawing of a vintage typewriter, stage 2, 20 steps</figcaption>
+                    </figure>
+                </div>
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/0_stage2_image1_120.png" loading="lazy">
+                        <figcaption>a high quality macro photo of a blooming flower, stage 2, 120 steps</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/0_stage2_image2_120.png" loading="lazy">
+                        <figcaption>a spaceship docking at a massive orbital station, stage 2, 120 steps</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/0_stage2_image3_120.png" loading="lazy">
+                        <figcaption>a pencil drawing of a vintage typewriter, stage 2, 120 steps</figcaption>
+                    </figure>
+                </div>
+
+                <p style="margin-bottom: 1.25rem;">
+                    Comparing the results, I notice that higher inference steps create more refined and detailed images.
+                    In the 20 step version, the images are slightly more noisy. The 120 step version allows the
+                    diffusion model more iterations to denoise and refine the output. This ends up resulting in sharper
+                    details and better image quality.</p>
+            </section>
+
+            <section class="gallery-text">
+                <h2>Part 1 — Sampling Loops</h2>
+                <h3> Part 1.1 - Campanile Noise Addition</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    We will now begin working with the diffusion model. First we need to have noise at different levels
+                    for the model to learn from.
+                </p>
+
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_1_campanile.png" loading="lazy">
+                        <figcaption>Original Image (t = 0)</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_1_campanile_250.png" loading="lazy">
+                        <figcaption>t = 250</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_1_campanile_500.png" loading="lazy">
+                        <figcaption>t = 500</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_1_campanile_750.png" loading="lazy">
+                        <figcaption>t = 750</figcaption>
+                    </figure>
+                </div>
+
+                <h3> Part 1.2 - Classical Denoising</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    Here we demonstrate the classical method of denoising using a gaussian filter.
+                </p>
+
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_1_campanile.png" loading="lazy">
+                        <figcaption>Original Image (t = 0)</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_2_noisy_250.png" loading="lazy">
+                        <figcaption>Noisy Campanile t = 250</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_2_noisy_500.png" loading="lazy">
+                        <figcaption>Noisy Campanile t = 500</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_2_noisy_750.png" loading="lazy">
+                        <figcaption>Noisy Campanile t = 750</figcaption>
+                    </figure>
+                </div>
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_1_campanile.png" loading="lazy">
+                        <figcaption>Original Image (t = 0)</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_2_blurred_250.png" loading="lazy">
+                        <figcaption>Gaussian Blur Denoising t = 250</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_2_blurred_500.png" loading="lazy">
+                        <figcaption>Gaussian Blur Denoising t = 500</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_2_blurred_750.png" loading="lazy">
+                        <figcaption>Gaussian Blur Denoising t = 750</figcaption>
+                    </figure>
+                </div>
+
+                <h3> Part 1.3 - One Step Denoising Using Diffusion</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    Now we will denoise using the Diffusion model. We do this in one shot, so immediately interpolating
+                    the original image without iteration.</p>
+
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_1_campanile.png" loading="lazy">
+                        <figcaption>Original Image (t = 0)</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_3_noisy_250.png" loading="lazy">
+                        <figcaption>Noisy Campanile t = 250</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_3_noisy_500.png" loading="lazy">
+                        <figcaption>Noisy Campanile t = 500</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_3_noisy_750.png" loading="lazy">
+                        <figcaption>Noisy Campanile t = 750</figcaption>
+                    </figure>
+                </div>
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_1_campanile.png" loading="lazy">
+                        <figcaption>Original Image (t = 0)</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_3_estimated_250.png" loading="lazy">
+                        <figcaption>One-Step Denoised Campanile t = 250</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_3_estimated_500.png" loading="lazy">
+                        <figcaption>One-Step Denoised Campanile t = 500</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_3_estimated_750.png" loading="lazy">
+                        <figcaption>One-Step Denoised Campanile t = 750</figcaption>
+                    </figure>
+                </div>
+                <h3> Part 1.4 - Iterative Denoising</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    To get improvement, we iteratively denoise the image. We start the noise at level 990 and
+                    iteratively denoise at a rate of 30 timesteps.</p>
+
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_4_90.png" loading="lazy">
+                        <figcaption>Noisy Campanile at t=90</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_4_240.png" loading="lazy">
+                        <figcaption>Noisy Campanile at t=240</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_4_390.png" loading="lazy">
+                        <figcaption>Noisy Campanile at t=390</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_4_540.png" loading="lazy">
+                        <figcaption>Noisy Campanile at t=540</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_4_690.png" loading="lazy">
+                        <figcaption>Noisy Campanile at t=690</figcaption>
+                    </figure>
+                </div>
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_1_campanile.png" loading="lazy">
+                        <figcaption>Original Image</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_4_iterative.png" loading="lazy">
+                        <figcaption>Iteratively Denoised Campanile</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_4_onestep.png" loading="lazy">
+                        <figcaption>One-Step Denoised Campanile</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_4_gaussian.png" loading="lazy">
+                        <figcaption>Gaussian Blurred Campanile</figcaption>
+                    </figure>
+                </div>
+                <h3> Part 1.5 - Diffusion Model Sampling</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    Now let's work with generating new images. We can do this by iteratively denoising pure noise.
+                </p>
+
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_5_1.png" loading="lazy">
+                        <figcaption>Sample 1</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_5_2.png" loading="lazy">
+                        <figcaption>Sample 2</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_5_3.png" loading="lazy">
+                        <figcaption>Sample 3</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_5_4.png" loading="lazy">
+                        <figcaption>Sample 4</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_5_5.png" loading="lazy">
+                        <figcaption>Sample 5</figcaption>
+                    </figure>
+                </div>
+                <h3> Part 1.6 - Classifier-Free Guidance (CFG)</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    We can use context free guidance to improve the images generated and push the images away from
+                    images that are not "a high quality photo."
+                </p>
+
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_6_1.png" loading="lazy">
+                        <figcaption>Sample 1 with CFG</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_6_2.png" loading="lazy">
+                        <figcaption>Sample 2 with CFG</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_6_3.png" loading="lazy">
+                        <figcaption>Sample 3 with CFG</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_6_4.png" loading="lazy">
+                        <figcaption>Sample 4 with CFG</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_6_5.png" loading="lazy">
+                        <figcaption>Sample 5 with CFG</figcaption>
+                    </figure>
+                </div>
+                <h3> Part 1.7 - Image-to-image Translation</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    We can also generate images similar to the Campanile by first adding noise to the image and then
+                    applying classifier-free guidance during the denoising process. This steers the result toward the
+                    original image, though the reconstruction is naturally imprecise.
+                </p>
+
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_7_campanile_1.png" loading="lazy">
+                        <figcaption>i_start=1</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_campanile_2.png" loading="lazy">
+                        <figcaption>i_start=3</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_campanile_3.png" loading="lazy">
+                        <figcaption>i_start=5</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_campanile_4.png" loading="lazy">
+                        <figcaption>i_start=7</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_campanile_5.png" loading="lazy">
+                        <figcaption>i_start=10</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_campanile_6.png" loading="lazy">
+                        <figcaption>i_start=20</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_1_campanile.png" loading="lazy">
+                        <figcaption>Original Image</figcaption>
+                    </figure>
+                </div>
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_7_cat_1.png" loading="lazy">
+                        <figcaption>i_start=1</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_cat_2.png" loading="lazy">
+                        <figcaption>i_start=3</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_cat_3.png" loading="lazy">
+                        <figcaption>i_start=5</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_cat_4.png" loading="lazy">
+                        <figcaption>i_start=7</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_cat_5.png" loading="lazy">
+                        <figcaption>i_start=10</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_cat_6.png" loading="lazy">
+                        <figcaption>i_start=20</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_cat_original.png" loading="lazy">
+                        <figcaption>Original Image</figcaption>
+                    </figure>
+                </div>
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_7_frog_1.png" loading="lazy">
+                        <figcaption>i_start=1</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_frog_2.png" loading="lazy">
+                        <figcaption>i_start=3</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_frog_3.png" loading="lazy">
+                        <figcaption>i_start=5</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_frog_4.png" loading="lazy">
+                        <figcaption>i_start=7</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_frog_5.png" loading="lazy">
+                        <figcaption>i_start=10</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_frog_6.png" loading="lazy">
+                        <figcaption>i_start=20</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_frog_original.png" loading="lazy">
+                        <figcaption>Original Image</figcaption>
+                    </figure>
+                </div>
+                <h3> Part 1.7.1 - Image-to-image Translation</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    This also works for unnatural images such as hand drawn images.
+                </p>
+
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_7_1_web1.png" loading="lazy">
+                        <figcaption>i_start=1</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_web2.png" loading="lazy">
+                        <figcaption>i_start=3</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_web3.png" loading="lazy">
+                        <figcaption>i_start=5</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_web4.png" loading="lazy">
+                        <figcaption>i_start=7</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_web5.png" loading="lazy">
+                        <figcaption>i_start=10</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_web6.png" loading="lazy">
+                        <figcaption>i_start=20</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_avocado.png" loading="lazy">
+                        <figcaption>Original Image</figcaption>
+                    </figure>
+                </div>
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_7_1_hand_1.png" loading="lazy">
+                        <figcaption>i_start=1</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_hand_2.png" loading="lazy">
+                        <figcaption>i_start=3</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_hand_3.png" loading="lazy">
+                        <figcaption>i_start=5</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_hand_4.png" loading="lazy">
+                        <figcaption>i_start=7</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_hand_5.png" loading="lazy">
+                        <figcaption>i_start=10</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_hand_6.png" loading="lazy">
+                        <figcaption>i_start=20</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_house.png" loading="lazy">
+                        <figcaption>Original Image</figcaption>
+                    </figure>
+                </div>
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_7_1_hand_2_1.png" loading="lazy">
+                        <figcaption>i_start=1</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_hand_2_2.png" loading="lazy">
+                        <figcaption>i_start=3</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_hand_2_3.png" loading="lazy">
+                        <figcaption>i_start=5</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_hand_2_4.png" loading="lazy">
+                        <figcaption>i_start=7</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_hand_2_5.png" loading="lazy">
+                        <figcaption>i_start=10</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_hand_2_6.png" loading="lazy">
+                        <figcaption>i_start=20</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_original.png" loading="lazy">
+                        <figcaption>Original Image</figcaption>
+                    </figure>
+                </div>
+                <h3> Part 1.7.2 - Inpainting</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    For inpainting, masked regions are filled in while the unmasked portions of the image are preserved.
+                    At each denoising step, pixels outside the mask are replaced with the noised version of the original
+                    image. This approach allows the model to generate content that seamlessly blends with the
+                    surrounding context.
+                </p>
+
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_7_2_campanile1.png" loading="lazy">
+                        <figcaption>Original Image</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_2_campanile2.png" loading="lazy">
+                        <figcaption>Mask</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_2_campanile3.png" loading="lazy">
+                        <figcaption>To Replace</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_2_campanile4.png" loading="lazy">
+                        <figcaption>Inpainted Campanile</figcaption>
+                    </figure>
+                </div>
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_7_2_cat1.png" loading="lazy">
+                        <figcaption>Original Image</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_2_cat2.png" loading="lazy">
+                        <figcaption>Mask</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_2_cat3.png" loading="lazy">
+                        <figcaption>To Replace</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_2_cat4.png" loading="lazy">
+                        <figcaption>Inpainted Cat</figcaption>
+                    </figure>
+                </div>
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_7_2_frog1.png" loading="lazy">
+                        <figcaption>Original Image</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_2_frog2.png" loading="lazy">
+                        <figcaption>Mask</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_2_frog3.png" loading="lazy">
+                        <figcaption>To Replace</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_2_frog4.png" loading="lazy">
+                        <figcaption>Inpainted Frog</figcaption>
+                    </figure>
+                </div>
+                <h3> Part 1.7.3 - Text-Conditional Image-to-image Translation</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    We can also perform image-to-image translation by supplying a noisy version of the Campanile and
+                    guiding the model toward a different target direction. For example, the model can transform the
+                    image into an oil painting of a snowy mountain village.
+                </p>
+
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_7_3_campanile1.png" loading="lazy">
+                        <figcaption>Rocket Ship at i_start=1</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_3_campanile2.png" loading="lazy">
+                        <figcaption>Rocket Ship at i_start=3</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_3_campanile3.png" loading="lazy">
+                        <figcaption>Rocket Ship at i_start=5</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_3_campanile4.png" loading="lazy">
+                        <figcaption>Rocket Ship at i_start=7</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_3_campanile5.png" loading="lazy">
+                        <figcaption>Rocket Ship at i_start=10</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_3_campanile6.png" loading="lazy">
+                        <figcaption>Rocket Ship at i_start=20</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_1_campanile.png" loading="lazy">
+                        <figcaption>Original Image</figcaption>
+                    </figure>
+                </div>
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_7_3_test1.png" loading="lazy">
+                        <figcaption>an oil painting of a snowy mountain village at i_start=1</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_3_test2.png" loading="lazy">
+                        <figcaption>an oil painting of a snowy mountain village at i_start=3</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_3_test3.png" loading="lazy">
+                        <figcaption>an oil painting of a snowy mountain village at i_start=5</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_3_test4.png" loading="lazy">
+                        <figcaption>an oil painting of a snowy mountain village at i_start=7</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_3_test5.png" loading="lazy">
+                        <figcaption>an oil painting of a snowy mountain village at i_start=10</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_3_test6.png" loading="lazy">
+                        <figcaption>an oil painting of a snowy mountain village at i_start=20</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_avocado.png" loading="lazy">
+                        <figcaption>Original Image: an avocado</figcaption>
+                    </figure>
+                </div>
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_7_3_house1.png" loading="lazy">
+                        <figcaption>an oil painting of an old man at i_start=1</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_3_house2.png" loading="lazy">
+                        <figcaption>an oil painting of an old man at i_start=3</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_3_house3.png" loading="lazy">
+                        <figcaption>an oil painting of an old man at i_start=5</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_3_house4.png" loading="lazy">
+                        <figcaption>an oil painting of an old man at i_start=7</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_3_house5.png" loading="lazy">
+                        <figcaption>an oil painting of an old man at i_start=10</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_3_house6.png" loading="lazy">
+                        <figcaption>an oil painting of an old man at i_start=20</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_7_1_house.png" loading="lazy">
+                        <figcaption>Original Image: a tower</figcaption>
+                    </figure>
+                </div>
+                <h3> Part 1.8 - Visual Anagrams</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    We can also create visual anagrams that appear as one image in one orientation and as a different
+                    image when flipped. This is achieved by denoising the image along two opposing directions and then
+                    combining the flipped versions. Over time, this process guides the image toward a shared “middle
+                    ground,” resulting in a compelling visual anagram.
+                </p>
+
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_8_campfire1.png" loading="lazy">
+                        <figcaption>Prompt 1: "an oil painting of an old man"</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_8_campfire2.png" loading="lazy">
+                        <figcaption>Prompt 2: "an oil painting of people around a campfire"</figcaption>
+                    </figure>
+                </div>
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_8_skull1.png" loading="lazy">
+                        <figcaption>Prompt 1: "a lithograph of waterfalls"</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_8_skull2.png" loading="lazy">
+                        <figcaption>Prompt 2: "a lithograph of a skull"</figcaption>
+                    </figure>
+                </div>
+                <h3> Part 1.9 - Hybrid Images</h3>
+                <p style="margin-bottom: 1.25rem;">
+                    We can do the same with hybrid images by adding the low frequencies and high frequencies of the two
+                    directions of denoising.
+                </p>
+
+                <div class="gallery">
+                    <figure>
+                        <img src="./part_1_images/1_9_1.png" loading="lazy">
+                        <figcaption>Hybrid of 'a lithograph of a skull' (Low Freq) + 'a lithograph of waterfalls' (High
+                            Freq)</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="./part_1_images/1_9_2.png" loading="lazy">
+                        <figcaption>Hybrid of 'an oil painting of a wise elderly woman reading by candlelight' (Low
+                            Freq) + 'an oil painting of a snowy mountain village' (High Freq)</figcaption>
+                    </figure>
+                </div>
+            </section>
+            <h2>Flow Matching from Scratch!</h2>
+            <section class="gallery-text">
+                <h2>Part 1 — Training a Single-Step Denoising UNet</h2>
+                <p style="margin-bottom: 1.25rem;">
+                    We now focus on building a flow model to generate images of numbers using the MNIST
+                    dataset.
+                </p>
+                <h3>Part 1.2: Using the UNet to Train a Denoiser</h3>
+                <p>
+                    First we need to add noise to the train set to teach a Unet to undo noise.</p>
+                <figure>
+                    <img src="./part_2_images/5b_1_2.png" loading="lazy">
+                    <figcaption>Example image with varying amounts of noise</figcaption>
+                </figure>
+                <h3>Part 1.2.1: Training</h3>
+                <p>
+                    Below is the training curve for a U-Net trained on the noisy MNIST dataset. Sample denoising results
+                    after the 1st and 5th epochs are also shown. The training data includes Gaussian noise with a
+                    standard deviation of 0.5.</p>
+                <figure>
+                    <img src="./part_2_images/5b_1_2_1_curve.png" loading="lazy">
+                    <figcaption>Training Curve</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/5b_1_2_1_epoch1.png" loading="lazy">
+                    <figcaption>Epoch 1 Train Samples</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/5b_1_2_1_epoch5.png" loading="lazy">
+                    <figcaption>Epoch 5 Train Samples</figcaption>
+                </figure>
+                <h3>Part 1.2.2: Out-of-Distribution Testing</h3>
+                <p>
+                    Here are demonstartions of the model trained on 0.5 noise performing on various other noises
+                </p>
+                <figure>
+                    <img src="./part_2_images/5b_1_2_2.png" loading="lazy">
+                    <figcaption>Sample Images</figcaption>
+                </figure>
+                <h3>Part 1.2.3: Denoising Pure Noise</h3>
+                <p>
+                    Below are the results from training the U-Net on pure noise to generate new images. The training
+                    curve is shown, along with sample outputs after the 1st and 5th epochs. The generated images are
+                    highly blurred and appear to resemble a mixture of digits. This behavior is expected: since the
+                    model is trained on noise and attempts to predict digits across many samples, the optimal solution
+                    is to produce a “generic” digit that is approximately similar to all numbers. As a result, the model
+                    generates a hybrid image rather than a distinct digit.
+                </p>
+                <figure>
+                    <img src="./part_2_images/5b_1_2_3_curve.png" loading="lazy">
+                    <figcaption>Training Curve</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/5b_1_2_3_epoch1.png" loading="lazy">
+                    <figcaption>Epoch 1 Train Samples</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/5b_1_2_3_epoch5.png" loading="lazy">
+                    <figcaption>Epoch 5 Train Samples</figcaption>
+                </figure>
+            </section>
+            <section class="gallery-text">
+                <h2>Part 2 — Training a Flow Matching Model</h2>
+                <h3>Training and Sampling from the UNet</h3>
+                <p>
+                    Below are the results from training the Flow model. As the time step
+                    t increases, additional noise is introduced and subsequently removed by the model. The training
+                    curve is shown, along with sample outputs after the 1st, 5th, and 10th epochs.
+                </p>
+                <figure>
+                    <img src="./part_2_images/5b_2_2_curve.png" loading="lazy">
+                    <figcaption>Training Curve</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/5b_2_3.png" loading="lazy">
+                    <figcaption>Row 1 corresponds to samples from Epoch 1, Row 2 from Epoch 5, Row 3 from Epoch 10. As
+                        you can see, some numbers start to become identifiable after epoch 10.</figcaption>
+                </figure>
+                <h3>Training and Sampling from a Class-Conditioned UNet</h3>
+                <p>
+                    We next incorporate conditioning on the digit class. This enables the model to generate images of
+                    specific digits while also providing additional information that improves output quality. Below are
+                    the training curve and sample results after the 1st, 5th, and 10th epochs of training.
+                </p>
+                <figure>
+                    <img src="./part_2_images/5b_2_5_curve.png" loading="lazy">
+                    <figcaption>Training Curve</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/5b_2_6_epoch1.png" loading="lazy">
+                    <figcaption>4 Samples of every digit during Epoch 1.</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/5b_2_6_epoch5.png" loading="lazy">
+                    <figcaption>4 Samples of every digit during Epoch 5.</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/5b_2_6_epoch10.png" loading="lazy">
+                    <figcaption>4 Samples of every digit during Epoch 10.</figcaption>
+                </figure>
+                <h3>Training Class Conditional Flow UNet Without Scheduler</h3>
+                <p>
+                    In this experiment, we remove the learning rate scheduler and instead train using a constant
+                    learning rate. To compensate, we increase the number of time steps in the flow process, providing
+                    finer temporal resolution during training. This setup allows the model to learn the denoising
+                    dynamics in a more gradual and stable manner despite the absence of a scheduler.
+                </p>
+                <figure>
+                    <img src="./part_2_images/5b_2_6_constantlr_curve.png" loading="lazy">
+                    <figcaption>Training Curve</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/5b_2_6_constantlr_epoch1.png" loading="lazy">
+                    <figcaption>4 Samples of every digit during Epoch 1.</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/5b_2_6_constantlr_epoch5.png" loading="lazy">
+                    <figcaption>4 Samples of every digit during Epoch 5.</figcaption>
+                </figure>
+                <figure>
+                    <img src="./part_2_images/5b_2_6_constantlr_epoch10.png" loading="lazy">
+                    <figcaption>4 Samples of every digit during Epoch 10.</figcaption>
+                </figure>
+            </section>
+        </main>
+
+        <footer>
+            <p>
+                Built with plain HTML & CSS. Hosted on GitHub Pages.
+                <a href="https://cal-cs180.github.io/fa25/hw/proj5/index.html">Assignment details</a>.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const root = document.documentElement;
+
+        function getInitialTheme() {
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const saved = localStorage.theme;
+            return saved || (systemPrefersDark ? 'dark' : 'light');
+        }
+
+        function applyTheme(theme) {
+            root.setAttribute('data-theme', theme);
+            localStorage.theme = theme;
+        }
+
+        function updateToggleIcons() {
+            const current = root.getAttribute('data-theme') || getInitialTheme();
+            document.querySelectorAll('.theme-toggle').forEach((btn) => {
+                btn.innerHTML = `<i data-lucide="${current === 'dark' ? 'sun' : 'moon'}"></i>`;
+            });
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons();
+            }
+        }
+
+        // Initialize
+        applyTheme(getInitialTheme());
+        updateToggleIcons();
+
+        // Wire up events for all toggles
+        document.querySelectorAll('.theme-toggle').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const current = root.getAttribute('data-theme');
+                const next = current === 'dark' ? 'light' : 'dark';
+                applyTheme(next);
+                updateToggleIcons();
+            });
+        });
+    </script>
+</body>
+
+</html>
