@@ -166,7 +166,7 @@
                 <h3> Part 1.3 - One Step Denoising Using Diffusion</h3>
                 <p style="margin-bottom: 1.25rem;">
                     Now we will denoise using the Diffusion model. We do this in one shot, so immediately interpolating
-                    the original image without iteration.</p>
+                    the original image without iteration. The top row contains the noisy image and the bottom row contains the one-step denoised image</p>
 
                 <div class="gallery">
                     <figure>
@@ -251,7 +251,7 @@
                 </div>
                 <h3> Part 1.5 - Diffusion Model Sampling</h3>
                 <p style="margin-bottom: 1.25rem;">
-                    Now let's work with generating new images. We can do this by iteratively denoising pure noise.
+                    Now let's work with generating new images. We can do this by iteratively denoising pure noise. Diversity is limited but textures stay coherent thanks to the long chain.
                 </p>
 
                 <div class="gallery">
@@ -279,7 +279,7 @@
                 <h3> Part 1.6 - Classifier-Free Guidance (CFG)</h3>
                 <p style="margin-bottom: 1.25rem;">
                     We can use context free guidance to improve the images generated and push the images away from
-                    images that are not "a high quality photo."
+                    images that are not "a high quality photo." With a guidance scale γ = 7, the outputs sharpen edges and increase photorealism compared to unconditional sampling.
                 </p>
 
                 <div class="gallery">
@@ -403,7 +403,7 @@
                 </div>
                 <h3> Part 1.7.1 - Image-to-image Translation</h3>
                 <p style="margin-bottom: 1.25rem;">
-                    This also works for unnatural images such as hand drawn images.
+                    This also works for unnatural images such as hand drawn images. Each set sweeps the mandated noise levels to demonstrate how much guidance we retain.
                 </p>
 
                 <div class="gallery">
@@ -711,14 +711,14 @@
                 </p>
                 <h3>Part 1.2: Using the UNet to Train a Denoiser</h3>
                 <p>
-                    First we need to add noise to the train set to teach a Unet to undo noise.</p>
+                    First we need to add noise to the train set to teach a UNet to undo noise.</p>
                 <figure>
                     <img src="./part_2_images/5b_1_2.png" loading="lazy">
                     <figcaption>Example image with varying amounts of noise</figcaption>
                 </figure>
                 <h3>Part 1.2.1: Training</h3>
                 <p>
-                    Below is the training curve for a U-Net trained on the noisy MNIST dataset. Sample denoising results
+                    Below is the training curve for a UNet trained on the noisy MNIST dataset. Sample denoising results
                     after the 1st and 5th epochs are also shown. The training data includes Gaussian noise with a
                     standard deviation of 0.5.</p>
                 <figure>
